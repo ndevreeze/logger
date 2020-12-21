@@ -18,11 +18,11 @@ Clojure CLI/deps.edn
 
 First initialise the logger:
 
-    (log/start! "/tmp/foo.log" :debug)
+    (log/init "/tmp/foo.log" :info)
   
 or:
 
-    (log/start! nil :debug)
+    (log/init nil :debug)
   
 Then log at different levels:
 
