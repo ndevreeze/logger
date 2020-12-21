@@ -1,6 +1,6 @@
 # logger
 
-FIXME: description
+Minimal Clojure logging library, mainly for scripting 
 
 ## Installation
 
