@@ -46,6 +46,13 @@
   (Logger/getRootLogger))
 
 ;; 2020-12-20: inspired by https://github.com/pjlegato/onelog/blob/master/src/onelog/core.clj
+;; remove all appenders first.
+;; getAllAppenders()
+;; getAppender(String name)
+;;  	isAttached(Appender appender) -> boolean, lijkt bruikbaar.
+;; removeAllAppenders()
+;; removeAppender(Appender appender)
+;; removeAppender(String name)
 (defn init
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
@@ -53,6 +60,7 @@
   ([logfile loglevel]
    (let [root (get-root-logger)]
      (.setLevel root (as-level loglevel))
+     (.removeAllAppenders root)
      (.addAppender root (console-appender))
      (if logfile
        (.addAppender root (rotating-appender logfile)))))
