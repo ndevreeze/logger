@@ -21,17 +21,17 @@ First initialise the logger:
     (log/start! "/tmp/foo.log" :debug)
   
 or:
+
     (log/start! nil :debug)
   
 Then log at different levels:
+
     (log/error "A different logfile, error level")
     (log/warn "warn level")
     (log/debug "One line at debug level")
     (log/info "At info level")
 
-## Examples
-
-See Usage
+## Developing
 
 ### Testing
 
@@ -46,10 +46,6 @@ or:
 ### Bugs
 
 * No known errors, but see Todo below.
-
-### Developing
-
-...
 
 ### Todo
 
