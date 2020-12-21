@@ -16,7 +16,12 @@ Clojure CLI/deps.edn
 
 ## Usage
 
-First initialise the logger:
+Require:
+
+    (ns my.namespace
+      (:require [ndevreeze.logger :as log]))
+
+Initialise the logger:
 
     (log/init "/tmp/foo.log" :info)
   
