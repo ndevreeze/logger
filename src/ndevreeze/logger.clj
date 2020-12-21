@@ -1,22 +1,13 @@
 (ns ndevreeze.logger
-  (:require [clojure.tools.cli :as cli]
-            [me.raynes.fs :as fs]
-            [clojure.java.jdbc :as jdbc]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clojure.set :as set]
-            [clojure.data.csv :as csv]
-            [clojure.edn :as edn]
-            [java-time :as time]
-            [clojure.tools.logging :as log])
-  
-  (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender EnhancedPatternLayout
-            Level Logger]))
+  (:require [clojure.tools.logging :as log])
+  (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender
+            EnhancedPatternLayout Level Logger]))
 
 ;; similar to onelog, also used clj-logging-config for inspiration.
 ;; TODO - should use Log4j v2, now using v1.
 
-(def production-log-prefix-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
+;; TODO - maybe also support other log-formats. But do want to keep it minimal.
+(def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
 ;; copied from https://github.com/malcolmsparks/clj-logging-config/blob/master/src/main/clojure/clj_logging_config/log4j.clj
 (defn- ^Level as-level [level]
@@ -37,7 +28,7 @@
   "Returns a logging adapter that rotates the logfile nightly at about midnight."
   [logfile]
   (DailyRollingFileAppender.
-   (EnhancedPatternLayout. production-log-prefix-format)
+   (EnhancedPatternLayout. log-format)
    logfile
    ".yyyy-MM-dd"))
 
@@ -47,7 +38,7 @@
   "Returns a logging adapter that logs to the console (stderr)"
   []
   (ConsoleAppender.
-   (EnhancedPatternLayout. production-log-prefix-format)))
+   (EnhancedPatternLayout. log-format)))
 
 (defn- get-root-logger
   "get root log4j logger, so 2 appenders can be set"
@@ -80,7 +71,7 @@
   [& forms]
   (log/info (apply str forms)))
 
-;; TODO - maybe add colours again, but only to console, not to the file.
+;; TODO - maybe add colours again (as in onelog), but only to console, not to the file.
 (defn warn
   [& forms] 
   (log/warn (apply str forms)))
