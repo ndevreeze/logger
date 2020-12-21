@@ -14,40 +14,38 @@ Clojure CLI/deps.edn
 
 [![Clojars Project](https://img.shields.io/clojars/v/ndevreeze/logger.svg)](https://clojars.org/ndevreeze/logger)
 
-## Add to git repo
-(Remove when done)
-go to github.com and log in
-create new repo with probably same name as the library. Do not create files, we're importing an existing repo.
-
-git init
-git add *
-git commit -m "first commit"
-git remote add origin https://github.com/ndevreeze/logger.git
-git push -u origin master
-
-gace:
-git add <files>
-git commit ...
-
 ## Usage
 
-FIXME: explanation
+First initialise the logger:
 
-## Options
-
-FIXME: listing of options this app accepts.
+    (log/start! "/tmp/foo.log" :debug)
+  
+or:
+    (log/start! nil :debug)
+  
+Then log at different levels:
+    (log/error "A different logfile, error level")
+    (log/warn "warn level")
+    (log/debug "One line at debug level")
+    (log/info "At info level")
 
 ## Examples
 
-...
+See Usage
 
 ### Testing
 
     $ lein midje
 
+or:
+
+    $ lein repl (or start in Cider)
+    (use 'midje.repl)
+    (autotest)
+    
 ### Bugs
 
-...
+* No known errors, but see Todo below.
 
 ### Developing
 
@@ -55,12 +53,14 @@ FIXME: listing of options this app accepts.
 
 ### Todo
 
-...
+* Should use Log4j v2, now using v1.
+* Log to stderr; now logging to stdout, something with ConsoleAppender
 
 ## Related and similar projects (libraries)
 
-...
-
+* https://github.com/pjlegato/onelog - used as a base for this library, but some differences.
+* https://github.com/malcolmsparks/clj-logging-config - also used as a base
+    
 ## License
 
 Copyright © 2020 Nico de Vreeze
