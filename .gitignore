@@ -1,0 +1,13 @@
+/target
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.out
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+.hgignore
+.hg/
+git-add-commit.sh
