@@ -2,6 +2,15 @@
 
 Minimal Clojure logging library, mainly for scripting 
 
+## Why?
+
+There are quite a few logging libraries already available, so why another one? Some goals:
+
+* Log both to a file and to the console (stdout for now)
+* Include timestamps with both milliseconds and timezone
+* No config files needed
+* Keep it simple, mostly for command line scripts
+
 ## Installation
 
 Leiningen/Boot
