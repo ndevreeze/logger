@@ -23,7 +23,7 @@
  (midje/fact "Test logger function only info"
              (do
                (fs/delete "log.out")
-               (log/init "log.out" :info)
+               (log/init-internal "log.out" :info)
                (log/info "Log at info 1")
                (log/debug "Log at debug 1")
                (-> "log.out"
@@ -34,7 +34,7 @@
  (midje/fact "Test logger function incl debug"
              (do
                (fs/delete "log.out")
-               (log/init "log.out" :debug)
+               (log/init-internal "log.out" :debug)
                (log/info "Log at info 2")
                (log/debug "Log at debug 2")
                (-> "log.out"
