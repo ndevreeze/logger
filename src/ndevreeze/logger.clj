@@ -116,7 +116,7 @@
   [{:keys [cwd name] :as opts} letter]
   (case letter
     "h" (str (fs/home))
-    "c" (or cwd (str (fs/absolute ".")))
+    "c" (str (fs/absolute (or (fs/expand-home cwd) ".")))
     "s" "TBD-script-dir"
     "t" (str (fs/tmpdir))
     "n" (or name "script-name")
