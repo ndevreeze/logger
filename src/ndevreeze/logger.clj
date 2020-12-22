@@ -160,7 +160,9 @@
   (let [pattern (if location
                   (to-pattern location)
                   pattern)
-        path (or file (to-log-file opts pattern))]
+        path (if file
+               (-> file fs/expand-home fs/absolute str)
+               (to-log-file opts pattern))]
     (if overwrite
       (fs/delete path))
     (init-internal path level)))
