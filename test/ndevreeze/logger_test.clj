@@ -29,7 +29,7 @@
                (-> "log.out"
                    slurp
                    remove-timestamps))
-             => "[INFO ] Log at info 1\n")
+             => "[INFO ] Logging to: log.out\n[INFO ] Log at info 1\n")
 
  (midje/fact "Test logger function incl debug"
              (do
@@ -40,7 +40,7 @@
                (-> "log.out"
                    slurp
                    remove-timestamps))
-             => "[INFO ] Log at info 2\n[DEBUG] Log at debug 2\n")
+             => "[INFO ] Logging to: log.out\n[INFO ] Log at info 2\n[DEBUG] Log at debug 2\n")
  )
 
  

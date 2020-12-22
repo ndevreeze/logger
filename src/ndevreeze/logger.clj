@@ -27,6 +27,32 @@
                           :warn Level/WARN} level)
    (instance? Level level) level))
 
+;; these log functions more to the top, called by log/init.
+(defn trace 
+  [& forms]
+  (log/trace (apply str forms)))
+
+(defn debug
+  [& forms]
+  (log/debug (apply str forms)))
+
+(defn info
+  [& forms]
+  (log/info (apply str forms)))
+
+;; TODO - maybe add colours again (as in onelog), but only to console, not to the file.
+(defn warn
+  [& forms] 
+  (log/warn (apply str forms)))
+
+(defn error
+  [& forms] 
+  (log/error (apply str forms)))
+
+(defn fatal
+  [& forms] 
+  (log/fatal (apply str forms)))
+
 (defn- rotating-appender
   "Returns a logging adapter that rotates the logfile nightly at about midnight."
   [logfile]
@@ -49,14 +75,8 @@
   (Logger/getRootLogger))
 
 ;; 2020-12-20: inspired by https://github.com/pjlegato/onelog/blob/master/src/onelog/core.clj
-;; remove all appenders first.
-;; getAllAppenders()
-;; getAppender(String name)
-;;  	isAttached(Appender appender) -> boolean, lijkt bruikbaar.
-;; removeAllAppenders()
-;; removeAppender(Appender appender)
-;; removeAppender(String name)
-;; maybe this will become the internal version, and init2 the main external one.
+;; TODO - do we always need the root-logger? Because if multiple script are running in the cljsh-server,
+;; we need to separate them, separate contexts.
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
@@ -67,7 +87,9 @@
      (.removeAllAppenders root)
      (.addAppender root (console-appender))
      (if logfile
-       (.addAppender root (rotating-appender logfile)))))
+       (.addAppender root (rotating-appender logfile))))
+   (when logfile
+     (log/info "Logging to:" logfile)))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
@@ -144,29 +166,4 @@
     (init-internal path level)))
 
 ;; TODO - close log-file? Maybe needed in cljsh if we run multiple scripts?
-
-(defn trace 
-  [& forms]
-  (log/trace (apply str forms)))
-
-(defn debug
-  [& forms]
-  (log/debug (apply str forms)))
-
-(defn info
-  [& forms]
-  (log/info (apply str forms)))
-
-;; TODO - maybe add colours again (as in onelog), but only to console, not to the file.
-(defn warn
-  [& forms] 
-  (log/warn (apply str forms)))
-
-(defn error
-  [& forms] 
-  (log/error (apply str forms)))
-
-(defn fatal
-  [& forms] 
-  (log/fatal (apply str forms)))
 
