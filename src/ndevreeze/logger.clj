@@ -10,6 +10,11 @@
 ;; TODO - should use Log4j v2, now using v1.
 ;; TODO - support multiple (root?) loggers, when running in
 ;;        server-mode, and two scripts run at the same time (log4j v2?).
+;;        This is still untested, although we do support serial calls now.
+
+;; close log-file? Maybe needed in cljsh if we run multiple scripts?
+;; in cljsh de *err* and *out* streams are created and closed for each client session. We use these streams for our logging, namely de *err* stream.
+
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
@@ -63,9 +68,6 @@
    logfile
    ".yyyy-MM-dd"))
 
-;; TODO - log to stderr, or set as option. Can be done in the constructor of ConsoleAppender
-;; have .getTarget, but not .setTarget, needs to be set at construction time.
-;; 2020-12-31: give current dynamic value of *out* as the target, maybe *err*.
 (defn- out-appender
   "Returns a logging adapter that logs to the console (stderr), connected to *out*"
   []
@@ -87,7 +89,7 @@
    (EnhancedPatternLayout. log-format)))
 
 (defn- get-root-logger
-  "get root log4j logger, so 2 appenders can be set"
+  "get root log4j logger, so appenders can be set"
   []
   (Logger/getRootLogger))
 
@@ -99,9 +101,6 @@
 ;; - remove all file appenders from a category.
 ;; - add an appender to a category, given type, name, and constructor function.
 ;; so need a nested structure. [cat type] is the main key. value is another map, with key=name, value=appender.
-;; then delete: get map with cat/type as key. Delete from category. and use assoc to set to an empty list.
-;; get-to-delete: (get @app [cat type]): (doseq [[_ x] {:a 1 :b 2}] (println x))
-;; add: (assoc-in {:a {:b 1}} [:a :c] 2)
 (defonce appenders (atom {}))
 
 (defn maybe-add-appender!
@@ -120,41 +119,25 @@
     (.removeAppender category app))
   (swap! appenders assoc [category :file] {}))
 
+(defn get-appenders
+  "Return the atom/struct with all appenders, for debugging"
+  []
+  @appenders)
+
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
-  stdout only."
+  stdout only.
+  Should be able to handle multiple init calls."
   ([logfile loglevel]
    (let [root (get-root-logger)]
-     #_(println "Appenders 1: " (.getAllAppenders root))
      (.setLevel root (as-level loglevel))
      (remove-file-appenders! root)
      (maybe-add-appender! root :stdio *err* err-appender)
      (if logfile
        (maybe-add-appender! root :file logfile (fn [] (rotating-appender logfile))))
      (when logfile
-       (log/info "Logging to:" logfile))
-     #_(println "Appenders 2: " (.getAllAppenders root))))
-  ([logfile] (init-internal logfile :info))
-  ([] (init-internal nil :info)))
-
-#_(defn init-internal
-  "Sets a default, appwide log adapter. Optional arguments set the
-  default logfile and loglevel. If no logfile is provided, logs to
-  stdout only."
-  ([logfile loglevel]
-   (let [root (get-root-logger)]
-     (println "Appenders 1: " (.getAllAppenders root))
-     (.setLevel root (as-level loglevel))
-     #_(.removeAllAppenders root)
-     (.addAppender root (out-appender))
-     (if logfile
-       (.addAppender root (rotating-appender logfile)))
-     (when logfile
-       (log/info "Logging to:" logfile))
-     (println "Appenders 2: " (.getAllAppenders root))
-     #_(doseq [app (.getAllAppenders root)]
-       (println "Appender: " app))))
+       (log/info "Logging to:" logfile))))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
@@ -192,7 +175,6 @@
   [{:keys [cwd name] :as opts} pattern]
   (str/replace pattern #"%([hcstnd])" (fn [[_ letter]] (replace-letter opts letter))))
 
-;; alternative with keyword arguments
 (defn init
   "Initialises a log file.
 
@@ -232,5 +214,4 @@
       (fs/delete path))
     (init-internal path level)))
 
-;; TODO - close log-file? Maybe needed in cljsh if we run multiple scripts?
 
