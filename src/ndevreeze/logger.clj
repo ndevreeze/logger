@@ -4,10 +4,12 @@
             [clojure.string :as str]
             [me.raynes.fs :as fs])
   (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender
-            EnhancedPatternLayout Level Logger]))
+            EnhancedPatternLayout Level Logger WriterAppender]))
 
 ;; similar to onelog, also used clj-logging-config for inspiration.
 ;; TODO - should use Log4j v2, now using v1.
+;; TODO - support multiple (root?) loggers, when running in
+;;        server-mode, and two scripts run at the same time (log4j v2?).
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
@@ -63,6 +65,21 @@
 
 ;; TODO - log to stderr, or set as option. Can be done in the constructor of ConsoleAppender
 ;; have .getTarget, but not .setTarget, needs to be set at construction time.
+;; 2020-12-31: give current dynamic value of *out* as the target, maybe *err*.
+(defn- out-appender
+  "Returns a logging adapter that logs to the console (stderr), connected to *out*"
+  []
+  (WriterAppender.
+   (EnhancedPatternLayout. log-format)
+   *out*))
+
+(defn- err-appender
+  "Returns a logging adapter that logs to the console (stderr), connected to *err*"
+  []
+  (WriterAppender.
+   (EnhancedPatternLayout. log-format)
+   *err*))
+
 (defn- console-appender
   "Returns a logging adapter that logs to the console (stderr)"
   []
@@ -77,19 +94,67 @@
 ;; 2020-12-20: inspired by https://github.com/pjlegato/onelog/blob/master/src/onelog/core.clj
 ;; TODO - do we always need the root-logger? Because if multiple script are running in the cljsh-server,
 ;; we need to separate them, separate contexts.
+
+;; 2020-12-31: need a different structure, with usecases:
+;; - remove all file appenders from a category.
+;; - add an appender to a category, given type, name, and constructor function.
+;; so need a nested structure. [cat type] is the main key. value is another map, with key=name, value=appender.
+;; then delete: get map with cat/type as key. Delete from category. and use assoc to set to an empty list.
+;; get-to-delete: (get @app [cat type]): (doseq [[_ x] {:a 1 :b 2}] (println x))
+;; add: (assoc-in {:a {:b 1}} [:a :c] 2)
+(defonce appenders (atom {}))
+
+(defn maybe-add-appender!
+  "Add an appender to the category iff it's not already added.
+   Maybe also only create appender if needed, give a constructor-function"
+  [category app-type name appender-fn]
+  (when-not (get-in @appenders [[category app-type] name])
+    (let [appender (appender-fn)]
+      (swap! appenders assoc-in [[category app-type] name] appender)
+      (.addAppender category appender))))
+
+(defn remove-file-appenders!
+  "Remove all file appenders, but keep out/err stream appenders"
+  [category]
+  (doseq [[_ app] (get @appenders [category :file])]
+    (.removeAppender category app))
+  (swap! appenders assoc [category :file] {}))
+
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
   stdout only."
   ([logfile loglevel]
    (let [root (get-root-logger)]
+     #_(println "Appenders 1: " (.getAllAppenders root))
      (.setLevel root (as-level loglevel))
-     (.removeAllAppenders root)
-     (.addAppender root (console-appender))
+     (remove-file-appenders! root)
+     (maybe-add-appender! root :stdio *err* err-appender)
      (if logfile
-       (.addAppender root (rotating-appender logfile))))
-   (when logfile
-     (log/info "Logging to:" logfile)))
+       (maybe-add-appender! root :file logfile (fn [] (rotating-appender logfile))))
+     (when logfile
+       (log/info "Logging to:" logfile))
+     #_(println "Appenders 2: " (.getAllAppenders root))))
+  ([logfile] (init-internal logfile :info))
+  ([] (init-internal nil :info)))
+
+#_(defn init-internal
+  "Sets a default, appwide log adapter. Optional arguments set the
+  default logfile and loglevel. If no logfile is provided, logs to
+  stdout only."
+  ([logfile loglevel]
+   (let [root (get-root-logger)]
+     (println "Appenders 1: " (.getAllAppenders root))
+     (.setLevel root (as-level loglevel))
+     #_(.removeAllAppenders root)
+     (.addAppender root (out-appender))
+     (if logfile
+       (.addAppender root (rotating-appender logfile)))
+     (when logfile
+       (log/info "Logging to:" logfile))
+     (println "Appenders 2: " (.getAllAppenders root))
+     #_(doseq [app (.getAllAppenders root)]
+       (println "Appender: " app))))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
