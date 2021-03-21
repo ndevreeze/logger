@@ -20,7 +20,7 @@
              => "[INFO ] Log at info\n[DEBUG] Log at debug")
 
  ;; 2020-12-19: a bit strange, with dummy as postfix and prefix.
- ;; 2020-12-31: start using *out*. Some issues with reusing or closing the *out* stream, so just one test for now, check in cljsh.
+ ;; 2020-12-31: start using *out*. Some issues with reusing or closing the *out* stream, so just one test for now.
  (midje/fact "Test logger function only info, also to file"
              (let [logfile "log1.out"]
                (fs/delete logfile)
@@ -43,7 +43,7 @@
                    remove-timestamps))
              => "[INFO ] Logging to: log2.out\n[INFO ] Log at info 2\n[DEBUG] Log at debug 2\n")
 
- ;; alleen naar stdout/err, niet naar file, wat gaat er dan goed/fout?
+ ;; only to stdout/err, not to a file.
  (midje/fact "Test logger function only info, stdio"
              (do
                (log/init-internal nil :info)
@@ -58,18 +58,4 @@
                (log/info "Log at info 4")
                (log/debug "Log at debug 4")
                13)
-             => 13)
- 
- 
- )
-
-
-
-
-;; testje met functie met 1 of 2 params
-(defn testje
-  "1 of 2 params"
-  ([a b]
-   (println "a,b=" a b))
-  ([a]
-   (testje a 0)))
+             => 13))

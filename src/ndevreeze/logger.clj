@@ -15,26 +15,24 @@
 ;; close log-file? Maybe needed in cljsh if we run multiple scripts?
 ;; in cljsh de *err* and *out* streams are created and closed for each client session. We use these streams for our logging, namely de *err* stream.
 
-
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
 ;; copied from https://github.com/malcolmsparks/clj-logging-config/blob/master/src/main/clojure/clj_logging_config/log4j.clj
 (defn- ^Level as-level [level]
   (cond
-   (nil? level) nil
-   (= :inherit level) nil
-   (keyword? level) (get {:all Level/ALL
-                          :debug Level/DEBUG
-                          :error Level/ERROR
-                          :fatal Level/FATAL
-                          :info Level/INFO
-                          :off Level/OFF
-                          :trace Level/TRACE
-                          :warn Level/WARN} level)
-   (instance? Level level) level))
+    (nil? level) nil
+    (= :inherit level) nil
+    (keyword? level) (get {:all Level/ALL
+                           :debug Level/DEBUG
+                           :error Level/ERROR
+                           :fatal Level/FATAL
+                           :info Level/INFO
+                           :off Level/OFF
+                           :trace Level/TRACE
+                           :warn Level/WARN} level)
+    (instance? Level level) level))
 
-;; these log functions more to the top, called by log/init.
 (defn trace 
   [& forms]
   (log/trace (apply str forms)))
@@ -213,5 +211,3 @@
     (if overwrite
       (fs/delete path))
     (init-internal path level)))
-
-
