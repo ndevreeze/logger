@@ -27,6 +27,7 @@
                (log/init-internal logfile :info)
                (log/info "Log at info 1")
                (log/debug "Log at debug 1")
+               (log/close)
                (-> logfile
                    slurp
                    remove-timestamps))
@@ -38,6 +39,7 @@
                (log/init-internal logfile :debug)
                (log/info "Log at info 2")
                (log/debug "Log at debug 2")
+               (log/close)
                (-> logfile
                    slurp
                    remove-timestamps))
@@ -49,6 +51,7 @@
                (log/init-internal nil :info)
                (log/info "Log at info 3")
                (log/debug "Log at debug 3")
+               (log/close)
                12)
              => 12)
 
@@ -57,5 +60,6 @@
                (log/init-internal nil :debug)
                (log/info "Log at info 4")
                (log/debug "Log at debug 4")
+               (log/close)
                13)
              => 13))

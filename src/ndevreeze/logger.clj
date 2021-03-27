@@ -1,22 +1,36 @@
 (ns ndevreeze.logger
-  (:require [clojure.tools.logging :as log]
+  (:require ;;[clojure.tools.logging :as log]
             [java-time :as time]
             [clojure.string :as str]
             [me.raynes.fs :as fs])
   (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender
             EnhancedPatternLayout Level Logger WriterAppender]))
 
-;; similar to onelog, also used clj-logging-config for inspiration.
+;; Similar to onelog, and also used clj-logging-config for
+;; inspiration. Now use a logger per *err* stream. *err* gets a new
+;; binding for each nRepl session, and so for each script run.
+
 ;; TODO - should use Log4j v2, now using v1.
 ;; TODO - support multiple (root?) loggers, when running in
 ;;        server-mode, and two scripts run at the same time (log4j v2?).
 ;;        This is still untested, although we do support serial calls now.
 
-;; close log-file? Maybe needed in cljsh if we run multiple scripts?
-;; in cljsh de *err* and *out* streams are created and closed for each client session. We use these streams for our logging, namely de *err* stream.
-
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
+
+;; Logger objects, keyed by *err* streams
+(def loggers (atom {}))
+
+(defn- register-logger! [stream logger]
+  (swap! loggers assoc stream logger))
+
+(defn- unregister-logger! [stream logger]
+  (swap! loggers dissoc stream))
+
+(defn- get-logger 
+  "Get logger associated with (error) stream"
+  [stream]
+  (get @loggers stream))
 
 ;; copied from https://github.com/malcolmsparks/clj-logging-config/blob/master/src/main/clojure/clj_logging_config/log4j.clj
 (defn- ^Level as-level [level]
@@ -33,30 +47,45 @@
                            :warn Level/WARN} level)
     (instance? Level level) level))
 
-(defn trace 
+;; TODO - maybe also forms that use the dynamic var *logger* in a binding form.
+
+(defn log
+  [level forms]
+  (let [logger (get-logger *err*)
+        msg (str/join " " forms)]
+    (.log logger (as-level level) msg)))
+
+(defn trace
   [& forms]
-  (log/trace (apply str forms)))
+  (log :trace forms))
 
 (defn debug
   [& forms]
-  (log/debug (apply str forms)))
+  (log :debug forms))
 
 (defn info
   [& forms]
-  (log/info (apply str forms)))
+  (log :info forms))
 
-;; TODO - maybe add colours again (as in onelog), but only to console, not to the file.
 (defn warn
-  [& forms] 
-  (log/warn (apply str forms)))
+  [& forms]
+  (log :warn forms))
 
 (defn error
-  [& forms] 
-  (log/error (apply str forms)))
+  [& forms]
+  (log :error forms))
 
 (defn fatal
-  [& forms] 
-  (log/fatal (apply str forms)))
+  [& forms]
+  (log :fatal forms))
+
+(defn close
+  "Close the currently active logger and appenders.
+   Connected to *err*"
+  []
+  (let [logger (get-logger *err*)]
+    (.removeAllAppenders logger)
+    (unregister-logger! *err* logger)))
 
 (defn- rotating-appender
   "Returns a logging adapter that rotates the logfile nightly at about midnight."
@@ -86,58 +115,90 @@
   (ConsoleAppender.
    (EnhancedPatternLayout. log-format)))
 
-(defn- get-root-logger
-  "get root log4j logger, so appenders can be set"
-  []
-  (Logger/getRootLogger))
+(defn- get-logger!
+  "get log4j logger, so appenders can be set.
+   based on name, create new one if it does not exist yet.
+   Also register the logger in the atom loggers"
+  [name]
+  (let [logger (Logger/getLogger name)]
+    (register-logger! *err* logger)
+    logger))
 
 ;; 2020-12-20: inspired by https://github.com/pjlegato/onelog/blob/master/src/onelog/core.clj
-;; TODO - do we always need the root-logger? Because if multiple script are running in the cljsh-server,
+;; TODO - do we always need the root-logger? Because if multiple script are running in the genie daemon.
 ;; we need to separate them, separate contexts.
 
 ;; 2020-12-31: need a different structure, with usecases:
 ;; - remove all file appenders from a category.
 ;; - add an appender to a category, given type, name, and constructor function.
 ;; so need a nested structure. [cat type] is the main key. value is another map, with key=name, value=appender.
-(defonce appenders (atom {}))
 
-(defn maybe-add-appender!
-  "Add an appender to the category iff it's not already added.
+;; 2021-03-27: prb don't need anymore, keep for now.
+#_(defonce appenders (atom {}))
+
+#_(defn maybe-add-appender!
+    "Add an appender to the category iff it's not already added.
    Maybe also only create appender if needed, give a constructor-function"
-  [category app-type name appender-fn]
-  (when-not (get-in @appenders [[category app-type] name])
-    (let [appender (appender-fn)]
-      (swap! appenders assoc-in [[category app-type] name] appender)
-      (.addAppender category appender))))
+    [category app-type name appender-fn]
+    (when-not (get-in @appenders [[category app-type] name])
+      (let [appender (appender-fn)]
+        (swap! appenders assoc-in [[category app-type] name] appender)
+        (.addAppender category appender))))
 
-(defn remove-file-appenders!
-  "Remove all file appenders, but keep out/err stream appenders"
-  [category]
-  (doseq [[_ app] (get @appenders [category :file])]
-    (.removeAppender category app))
-  (swap! appenders assoc [category :file] {}))
+#_(defn remove-file-appenders!
+    "Remove all file appenders, but keep out/err stream appenders"
+    [category]
+    (doseq [[_ app] (get @appenders [category :file])]
+      (.removeAppender category app))
+    (swap! appenders assoc [category :file] {}))
 
-(defn get-appenders
-  "Return the atom/struct with all appenders, for debugging"
-  []
-  @appenders)
+#_(defn get-appenders
+    "Return the atom/struct with all appenders, for debugging"
+    []
+    @appenders)
 
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
-  stdout only.
-  Should be able to handle multiple init calls."
+  stderr only.
+  Should be able to handle multiple init calls.
+  Return logger created (or re-used)"
   ([logfile loglevel]
-   (let [root (get-root-logger)]
-     (.setLevel root (as-level loglevel))
-     (remove-file-appenders! root)
-     (maybe-add-appender! root :stdio *err* err-appender)
+   (let [logger (if logfile
+                  (get-logger! logfile)
+                  (get-logger! (str *err*)))]
+     (.setLevel logger (as-level loglevel))
+     ;;     (remove-file-appenders! logger)
+     ;;     (maybe-add-appender! logger :stdio *err* err-appender)
+     (.removeAllAppenders logger)
+     (.addAppender logger (err-appender))
      (if logfile
-       (maybe-add-appender! root :file logfile (fn [] (rotating-appender logfile))))
+       ;;       (maybe-add-appender! logger :file logfile (fn [] (rotating-appender logfile)))
+       (.addAppender logger (rotating-appender logfile))
+       )
      (when logfile
-       (log/info "Logging to:" logfile))))
+;;       (println "call logging to:")
+       (info "Logging to:" logfile))
+     logger))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
+
+#_(defn init-internal
+    "Sets a default, appwide log adapter. Optional arguments set the
+  default logfile and loglevel. If no logfile is provided, logs to
+  stderr only.
+  Should be able to handle multiple init calls."
+    ([logfile loglevel]
+     (let [root (get-root-logger)]
+       (.setLevel root (as-level loglevel))
+       (remove-file-appenders! root)
+       (maybe-add-appender! root :stdio *err* err-appender)
+       (if logfile
+         (maybe-add-appender! root :file logfile (fn [] (rotating-appender logfile))))
+       (when logfile
+         (log/info "Logging to:" logfile))))
+    ([logfile] (init-internal logfile :info))
+    ([] (init-internal nil :info)))
 
 (defn to-pattern
   "Convert pattern shortcut to an actual pattern for a log file"
