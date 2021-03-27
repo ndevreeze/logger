@@ -11,20 +11,21 @@
 ;; binding for each nRepl session, and so for each script run.
 
 ;; TODO - should use Log4j v2, now using v1.
-;; TODO - support multiple (root?) loggers, when running in
-;;        server-mode, and two scripts run at the same time (log4j v2?).
-;;        This is still untested, although we do support serial calls now.
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
-;; Logger objects, keyed by *err* streams
+;; Map of Logger objects, keyed by *err* streams
 (def loggers (atom {}))
 
-(defn- register-logger! [stream logger]
+(defn- register-logger!
+  "Register a Logger by associating it with a (dynamic) stream like *err*"
+  [stream logger]
   (swap! loggers assoc stream logger))
 
-(defn- unregister-logger! [stream logger]
+(defn- unregister-logger!
+  "Unregister the Logger associated with the (dynamic) stream"
+  [stream]
   (swap! loggers dissoc stream))
 
 ;; TODO - public for now, used by genie. Maybe need another solution.
@@ -48,7 +49,7 @@
                            :warn Level/WARN} level)
     (instance? Level level) level))
 
-;; TODO - maybe also forms that use the dynamic var *logger* in a binding form.
+;; TODO - maybe also forms that use a dynamic var *logger* in a binding form.
 
 (defn log
   "log to the logger associated with the current *err* stream"
@@ -88,7 +89,7 @@
   []
   (let [logger (get-logger *err*)]
     (.removeAllAppenders logger)
-    (unregister-logger! *err* logger)))
+    (unregister-logger! *err*)))
 
 (defn- rotating-appender
   "Returns a logging adapter that rotates the logfile nightly at about midnight."
@@ -127,39 +128,6 @@
     (register-logger! *err* logger)
     logger))
 
-;; 2020-12-20: inspired by https://github.com/pjlegato/onelog/blob/master/src/onelog/core.clj
-;; TODO - do we always need the root-logger? Because if multiple script are running in the genie daemon.
-;; we need to separate them, separate contexts.
-
-;; 2020-12-31: need a different structure, with usecases:
-;; - remove all file appenders from a category.
-;; - add an appender to a category, given type, name, and constructor function.
-;; so need a nested structure. [cat type] is the main key. value is another map, with key=name, value=appender.
-
-;; 2021-03-27: prb don't need anymore, keep for now.
-#_(defonce appenders (atom {}))
-
-#_(defn maybe-add-appender!
-    "Add an appender to the category iff it's not already added.
-   Maybe also only create appender if needed, give a constructor-function"
-    [category app-type name appender-fn]
-    (when-not (get-in @appenders [[category app-type] name])
-      (let [appender (appender-fn)]
-        (swap! appenders assoc-in [[category app-type] name] appender)
-        (.addAppender category appender))))
-
-#_(defn remove-file-appenders!
-    "Remove all file appenders, but keep out/err stream appenders"
-    [category]
-    (doseq [[_ app] (get @appenders [category :file])]
-      (.removeAppender category app))
-    (swap! appenders assoc [category :file] {}))
-
-#_(defn get-appenders
-    "Return the atom/struct with all appenders, for debugging"
-    []
-    @appenders)
-
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
@@ -185,23 +153,6 @@
      logger))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
-
-#_(defn init-internal
-    "Sets a default, appwide log adapter. Optional arguments set the
-  default logfile and loglevel. If no logfile is provided, logs to
-  stderr only.
-  Should be able to handle multiple init calls."
-    ([logfile loglevel]
-     (let [root (get-root-logger)]
-       (.setLevel root (as-level loglevel))
-       (remove-file-appenders! root)
-       (maybe-add-appender! root :stdio *err* err-appender)
-       (if logfile
-         (maybe-add-appender! root :file logfile (fn [] (rotating-appender logfile))))
-       (when logfile
-         (log/info "Logging to:" logfile))))
-    ([logfile] (init-internal logfile :info))
-    ([] (init-internal nil :info)))
 
 (defn to-pattern
   "Convert pattern shortcut to an actual pattern for a log file"

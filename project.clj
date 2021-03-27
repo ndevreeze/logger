@@ -5,10 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [clj-commons/fs "1.6.307"]
-                 ;;                 [org.slf4j/slf4j-api "1.7.25"]
-                 ;;                 [org.slf4j/slf4j-log4j12 "1.7.25"]
                  [log4j "1.2.17"]
-                 ;;                 [org.clojure/tools.logging "1.1.0"] ;; was 0.2.6
                  [clojure.java-time "0.3.2"] ;;; new in Java 8, replacing Joda-time
                                              ;;; and clj-time
                  ]

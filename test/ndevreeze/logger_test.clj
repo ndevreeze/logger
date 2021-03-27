@@ -19,8 +19,6 @@
              (remove-timestamps "[2020-12-21 18:45:22.361+0100] [INFO ] Log at info\n[2020-12-21 18:45:22.361+0100] [DEBUG] Log at debug")
              => "[INFO ] Log at info\n[DEBUG] Log at debug")
 
- ;; 2020-12-19: a bit strange, with dummy as postfix and prefix.
- ;; 2020-12-31: start using *out*. Some issues with reusing or closing the *out* stream, so just one test for now.
  (midje/fact "Test logger function only info, also to file"
              (let [logfile "log1.out"]
                (fs/delete logfile)
