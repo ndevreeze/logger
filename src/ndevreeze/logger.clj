@@ -1,8 +1,8 @@
 (ns ndevreeze.logger
   (:require ;;[clojure.tools.logging :as log]
-            [java-time :as time]
-            [clojure.string :as str]
-            [me.raynes.fs :as fs])
+   [java-time :as time]
+   [clojure.string :as str]
+   [me.raynes.fs :as fs])
   (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender
             EnhancedPatternLayout Level Logger WriterAppender]))
 
@@ -27,7 +27,8 @@
 (defn- unregister-logger! [stream logger]
   (swap! loggers dissoc stream))
 
-(defn- get-logger 
+;; TODO - public for now, used by genie. Maybe need another solution.
+(defn get-logger 
   "Get logger associated with (error) stream"
   [stream]
   (get @loggers stream))
@@ -50,10 +51,12 @@
 ;; TODO - maybe also forms that use the dynamic var *logger* in a binding form.
 
 (defn log
-  [level forms]
-  (let [logger (get-logger *err*)
-        msg (str/join " " forms)]
-    (.log logger (as-level level) msg)))
+  "log to the logger associated with the current *err* stream"
+  ([logger level forms]
+   (when logger
+     (.log logger (as-level level) (str/join " " forms))))
+  ([level forms]
+   (log (get-logger *err*) level forms)))
 
 (defn trace
   [& forms]
@@ -177,7 +180,7 @@
        (.addAppender logger (rotating-appender logfile))
        )
      (when logfile
-;;       (println "call logging to:")
+       ;;       (println "call logging to:")
        (info "Logging to:" logfile))
      logger))
   ([logfile] (init-internal logfile :info))
