@@ -10,16 +10,17 @@ There are quite a few logging libraries already available, so why another one? S
 * Include timestamps with both milliseconds and timezone
 * No config files needed
 * Keep it simple, mostly for command line scripts
+* Support multiple log files, e.g. server/daemon and client/script logs.
 
 ## Installation
 
 Leiningen/Boot
 
-    [ndevreeze/logger "0.2.0"]
+    [ndevreeze/logger "0.3.0"]
 
 Clojure CLI/deps.edn
 
-    ndevreeze/logger {:mvn/version "0.2.0"}
+    ndevreeze/logger {:mvn/version "0.3.0"}
 
 [![Clojars Project](https://img.shields.io/clojars/v/ndevreeze/logger.svg)](https://clojars.org/ndevreeze/logger)
 
@@ -59,12 +60,11 @@ or:
     
 ### Bugs
 
-* No known errors, but see Todo below.
+* No known errors, but see Todo below. Use Github issues if you want to report a bug.
 
 ### Todo
 
 * Should use Log4j v2, now using v1.
-* Log to stderr; now logging to stdout, something with ConsoleAppender
 
 ## Related and similar projects (libraries)
 
@@ -73,6 +73,6 @@ or:
     
 ## License
 
-Copyright © 2020 Nico de Vreeze
+Copyright © 2020, 2021 Nico de Vreeze
 
 Distributed under the Eclipse Public License, the same as Clojure.
