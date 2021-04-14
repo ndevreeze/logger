@@ -1,9 +1,9 @@
 (ns ndevreeze.logger
-  (:require ;;[clojure.tools.logging :as log]
+  (:require
    [java-time :as time]
    [clojure.string :as str]
    [me.raynes.fs :as fs])
-  (:import [org.apache.log4j ConsoleAppender DailyRollingFileAppender
+  (:import [org.apache.log4j DailyRollingFileAppender
             EnhancedPatternLayout Level Logger WriterAppender]))
 
 ;; Similar to onelog, and also used clj-logging-config for
@@ -99,12 +99,12 @@
    logfile
    ".yyyy-MM-dd"))
 
-(defn- out-appender
-  "Returns a logging adapter that logs to the console (stderr), connected to *out*"
-  []
-  (WriterAppender.
-   (EnhancedPatternLayout. log-format)
-   *out*))
+#_(defn- out-appender
+    "Returns a logging adapter that logs to the console (stderr), connected to *out*"
+    []
+    (WriterAppender.
+     (EnhancedPatternLayout. log-format)
+     *out*))
 
 (defn- err-appender
   "Returns a logging adapter that logs to the console (stderr), connected to *err*"
@@ -113,11 +113,11 @@
    (EnhancedPatternLayout. log-format)
    *err*))
 
-(defn- console-appender
-  "Returns a logging adapter that logs to the console (stderr)"
-  []
-  (ConsoleAppender.
-   (EnhancedPatternLayout. log-format)))
+#_(defn- console-appender
+    "Returns a logging adapter that logs to the console (stderr)"
+    []
+    (ConsoleAppender.
+     (EnhancedPatternLayout. log-format)))
 
 (defn- get-logger!
   "get log4j logger, so appenders can be set.
@@ -168,7 +168,8 @@
 
 (defn replace-letter
   "Replace %h pattern etc with the actual values"
-  [{:keys [cwd name] :as opts} letter]
+  [{:keys [cwd name]
+    :or {name "script"}} letter]
   (case letter
     "h" (str (fs/home))
     "c" (str (fs/absolute (or (fs/expand-home cwd) ".")))
@@ -179,7 +180,7 @@
 
 (defn to-log-file
   "Create a log file name based on given options and pattern"
-  [{:keys [cwd name] :as opts} pattern]
+  [opts pattern]
   (str/replace pattern #"%([hcstnd])" (fn [[_ letter]] (replace-letter opts letter))))
 
 (defn init-with-map
@@ -203,21 +204,19 @@
    - %t = temp dir (/tmp, or c:/tmp)
    - %n = script name
    - %d = datetime, as yyyy-mm-ddTHH-MM-SS"
-  [{:keys [level file pattern location name cwd overwrite] :as opts
+  [{:keys [level file pattern location overwrite] :as opts
     :or {level :info
          file nil
          pattern "%h/log/%n-%d.log"
          location nil
-         name "script"
-         cwd nil
-         overwrite false}}]
+         overwrite false}    }]
   (let [pattern (if location
                   (to-pattern location)
                   pattern)
         path (if file
                (-> file fs/expand-home fs/absolute str)
                (to-log-file opts pattern))]
-    (if overwrite
+    (when overwrite
       (fs/delete path))
     (init-internal path level)))
 
