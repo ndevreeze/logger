@@ -12,11 +12,13 @@
  "Test logger"
 
  (midje/fact "Test remove-timestamps"
-             (remove-timestamps "[2020-12-21 18:45:22.361+0100] [INFO ] Log at info")
-             => "[INFO ] Log at info")
+             (remove-timestamps "[2020-12-21 18:45:22.361+0100] [INFO ] info")
+             => "[INFO ] info")
 
  (midje/fact "Test remove-timestamps multiline"
-             (remove-timestamps "[2020-12-21 18:45:22.361+0100] [INFO ] Log at info\n[2020-12-21 18:45:22.361+0100] [DEBUG] Log at debug")
+             (remove-timestamps (str "[2020-12-21 18:45:22.361+0100]"
+                                     " [INFO ] Log at info\n[2020-12-21 "
+                                     "18:45:22.361+0100] [DEBUG] Log at debug"))
              => "[INFO ] Log at info\n[DEBUG] Log at debug")
 
  (midje/fact "Test logger function only info, also to file"
@@ -41,7 +43,8 @@
                (-> logfile
                    slurp
                    remove-timestamps))
-             => "[INFO ] Logging to: log2.out\n[INFO ] Log at info 2\n[DEBUG] Log at debug 2\n")
+             => (str "[INFO ] Logging to: log2.out\n[INFO ] "
+                     "Log at info 2\n[DEBUG] Log at debug 2\n"))
 
  ;; only to stdout/err, not to a file.
  (midje/fact "Test logger function only info, stdio"
