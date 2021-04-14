@@ -139,16 +139,10 @@
                   (get-logger! logfile)
                   (get-logger! (str *err*)))]
      (.setLevel logger (as-level loglevel))
-     ;;     (remove-file-appenders! logger)
-     ;;     (maybe-add-appender! logger :stdio *err* err-appender)
      (.removeAllAppenders logger)
      (.addAppender logger (err-appender))
-     (if logfile
-       ;;       (maybe-add-appender! logger :file logfile (fn [] (rotating-appender logfile)))
-       (.addAppender logger (rotating-appender logfile))
-       )
      (when logfile
-       ;;       (println "call logging to:")
+       (.addAppender logger (rotating-appender logfile))
        (info "Logging to:" logfile))
      logger))
   ([logfile] (init-internal logfile :info))
