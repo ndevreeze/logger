@@ -1,4 +1,8 @@
 (ns ndevreeze.logger
+  "Simple logging functions.
+  Similar to onelog, and also used clj-logging-config for
+  inspiration. Now use a logger per *err* stream. *err* gets a new
+  binding for each nRepl session, and so for each script run."
   (:require
    [java-time :as time]
    [clojure.string :as str]
@@ -6,17 +10,17 @@
   (:import [org.apache.log4j DailyRollingFileAppender
             EnhancedPatternLayout Level Logger WriterAppender]))
 
-;; Similar to onelog, and also used clj-logging-config for
-;; inspiration. Now use a logger per *err* stream. *err* gets a new
-;; binding for each nRepl session, and so for each script run.
 
 ;; TODO - should use Log4j v2, now using v1.
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
-(def log-format "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
+(def log-format
+  "Log format with timestamp, log-level, throwable and message"
+  "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
-;; Map of Logger objects, keyed by *err* streams
-(def loggers (atom {}))
+(def loggers
+  "Map of Logger objects, keyed by *err* streams"
+  (atom {}))
 
 (defn- register-logger!
   "Register a Logger by associating it with a (dynamic) stream like *err*"
@@ -34,8 +38,11 @@
   [stream]
   (get @loggers stream))
 
-;; copied from https://github.com/malcolmsparks/clj-logging-config/blob/master/src/main/clojure/clj_logging_config/log4j.clj
-(defn- ^Level as-level [level]
+(defn- ^Level as-level
+  "Get Java Level value for clojure keyword.
+  copied from https://github.com/malcolmsparks/clj-logging-config/blob/master/
+  src/main/clojure/clj_logging_config/log4j.clj"
+  [level]
   (cond
     (nil? level) nil
     (= :inherit level) nil
@@ -59,29 +66,44 @@
   ([level forms]
    (log (get-logger *err*) level forms)))
 
-(defn trace
-  [& forms]
-  (log :trace forms))
+#_(defn trace
+    [& forms]
+    (log :trace forms))
 
-(defn debug
-  [& forms]
-  (log :debug forms))
+#_(defn debug
+    [& forms]
+    (log :debug forms))
 
-(defn info
-  [& forms]
-  (log :info forms))
+#_(defn info
+    [& forms]
+    (log :info forms))
 
-(defn warn
-  [& forms]
-  (log :warn forms))
+#_(defn warn
+    [& forms]
+    (log :warn forms))
 
-(defn error
-  [& forms]
-  (log :error forms))
+#_(defn error
+    [& forms]
+    (log :error forms))
 
-(defn fatal
-  [& forms]
-  (log :fatal forms))
+#_(defn fatal
+    [& forms]
+    (log :fatal forms))
+
+(defmacro log-fn
+  "Macro to create a logging function for a level"
+  [level]
+  `(defn ~level
+     ~(str "Log function for " level)
+     [& forms#]
+     (log ~(keyword level) forms#)))
+
+(log-fn trace)
+(log-fn debug)
+(log-fn info)
+(log-fn warn)
+(log-fn error)
+(log-fn fatal)
 
 (defn close
   "Close the currently active logger and appenders.
@@ -92,7 +114,8 @@
     (unregister-logger! *err*)))
 
 (defn- rotating-appender
-  "Returns a logging adapter that rotates the logfile nightly at about midnight."
+  "Returns a logging adapter that rotates the logfile nightly
+  at about midnight."
   [logfile]
   (DailyRollingFileAppender.
    (EnhancedPatternLayout. log-format)
@@ -100,7 +123,8 @@
    ".yyyy-MM-dd"))
 
 (defn- err-appender
-  "Returns a logging adapter that logs to the console (stderr), connected to *err*"
+  "Returns a logging adapter that logs to the console (stderr),
+  connected to *err*"
   []
   (WriterAppender.
    (EnhancedPatternLayout. log-format)
@@ -110,8 +134,8 @@
   "get log4j logger, so appenders can be set.
    based on name, create new one if it does not exist yet.
    Also register the logger in the atom loggers"
-  [name]
-  (let [logger (Logger/getLogger name)]
+  [logger-name]
+  (let [logger (Logger/getLogger logger-name)]
     (register-logger! *err* logger)
     logger))
 
@@ -168,7 +192,8 @@
 (defn to-log-file
   "Create a log file name based on given options and pattern"
   [opts pattern]
-  (str/replace pattern #"%([hcstnd])" (fn [[_ letter]] (replace-letter opts letter))))
+  (str/replace pattern #"%([hcstnd])" (fn [[_ letter]]
+                                        (replace-letter opts letter))))
 
 (defn init-with-map
   "Initialises logging, possibly with a log-file.
@@ -176,7 +201,8 @@
   level     - log level like :info, :debug
   file      - give an explicit full path. Default is nil, use pattern
   pattern   - use a pattern for the log file path, see below
-  location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp, default is nil
+  location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp,
+              default is nil
   name      - script name, \"script\" bij default
   cwd       - give an explicit current-working-dir, default is nil
   overwrite - boolean, overwrite an existing log file, default false
@@ -219,7 +245,8 @@
   level     - log level like :info, :debug
   file      - give an explicit full path. Default is nil, use pattern
   pattern   - use a pattern for the log file path, see below
-  location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp, default is nil
+  location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp,
+              default is nil
   name      - script name, \"script\" bij default
   cwd       - give an explicit current-working-dir, default is nil
   overwrite - boolean, overwrite an existing log file, default false
