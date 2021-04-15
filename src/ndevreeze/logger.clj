@@ -10,7 +10,6 @@
   (:import [org.apache.log4j DailyRollingFileAppender
             EnhancedPatternLayout Level Logger WriterAppender]))
 
-
 ;; TODO - should use Log4j v2, now using v1.
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
@@ -65,30 +64,6 @@
      (.log logger (as-level level) (str/join " " forms))))
   ([level forms]
    (log (get-logger *err*) level forms)))
-
-#_(defn trace
-    [& forms]
-    (log :trace forms))
-
-#_(defn debug
-    [& forms]
-    (log :debug forms))
-
-#_(defn info
-    [& forms]
-    (log :info forms))
-
-#_(defn warn
-    [& forms]
-    (log :warn forms))
-
-#_(defn error
-    [& forms]
-    (log :error forms))
-
-#_(defn fatal
-    [& forms]
-    (log :fatal forms))
 
 (defmacro log-fn
   "Macro to create a logging function for a level"
