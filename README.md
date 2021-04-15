@@ -16,11 +16,11 @@ There are quite a few logging libraries already available, so why another one? S
 
 Leiningen/Boot
 
-    [ndevreeze/logger "0.3.0"]
+    [ndevreeze/logger "0.4.0"]
 
 Clojure CLI/deps.edn
 
-    ndevreeze/logger {:mvn/version "0.3.0"}
+    ndevreeze/logger {:mvn/version "0.4.0"}
 
 [![Clojars Project](https://img.shields.io/clojars/v/ndevreeze/logger.svg)](https://clojars.org/ndevreeze/logger)
 
