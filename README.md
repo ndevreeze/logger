@@ -41,13 +41,13 @@ or, to only log to stderr:
   
 or, init with a map, with these keys:
 
-  level     - log level like :info, :debug
-  file      - give an explicit full path. Default is nil, use pattern
-  pattern   - use a pattern for the log file path, see below
-  location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp, default is nil
-  name      - script name, \"script\" bij default
-  cwd       - give an explicit current-working-dir, default is nil
-  overwrite - boolean, overwrite an existing log file, default false
+   - level     - log level like :info, :debug
+   - file      - give an explicit full path. Default is nil, use pattern
+   - pattern   - use a pattern for the log file path, see below
+   - location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp, default is nil
+   - name      - script name, \"script\" bij default
+   - cwd       - give an explicit current-working-dir, default is nil
+   - overwrite - boolean, overwrite an existing log file, default false
 
   if all of file, pattern and location are nil, do not create a
   logfile, just log to the console.
