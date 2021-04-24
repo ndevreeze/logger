@@ -82,7 +82,7 @@ or:
     
 ### API Docs
 
-See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html).
+See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html). And cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.4.0/doc/readme
 
 ### Bugs
 
