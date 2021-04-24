@@ -19,7 +19,7 @@
   :repl-options {:init-ns ndevreeze.logger}
 
   :codox
-  {:output-path "codox"
+  {:output-path "docs/api"
    :metadata {:doc/format :markdown}
    :source-uri "http://github.com/ndevreeze/logger/blob/{version}/{filepath}#L{line}"}
 
