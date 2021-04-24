@@ -80,6 +80,10 @@ or:
     (use 'midje.repl)
     (autotest)
     
+### API Docs
+
+See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html).
+
 ### Bugs
 
 * No known errors, but see Todo below. Use Github issues if you want to report a bug.
