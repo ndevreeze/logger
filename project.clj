@@ -21,7 +21,7 @@
   :codox
   {:output-path "docs/api"
    :metadata {:doc/format :markdown}
-   :source-uri "http://github.com/ndevreeze/logger/blob/{version}/{filepath}#L{line}"}
+   :source-uri "https://github.com/ndevreeze/logger/blob/master/{filepath}#L{line}"}
 
   :repositories [["releases" {:url "https://clojars.org/repo/"
                               :creds :gpg}]])
