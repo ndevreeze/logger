@@ -18,6 +18,11 @@
 
   :repl-options {:init-ns ndevreeze.logger}
 
+  :codox
+  {:output-path "codox"
+   :metadata {:doc/format :markdown}
+   :source-uri "http://github.com/ndevreeze/logger/blob/{version}/{filepath}#L{line}"}
+
   :repositories [["releases" {:url "https://clojars.org/repo/"
                               :creds :gpg}]])
   
