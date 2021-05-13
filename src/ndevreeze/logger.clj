@@ -3,12 +3,11 @@
   Similar to onelog, and also used clj-logging-config for
   inspiration. Now use a logger per *err* stream. *err* gets a new
   binding for each nRepl session, and so for each script run."
-  (:require
-   [java-time :as time]
-   [clojure.string :as str]
-   [me.raynes.fs :as fs])
-  (:import [org.apache.log4j DailyRollingFileAppender
-            EnhancedPatternLayout Level Logger WriterAppender]))
+  (:require [clojure.string :as str]
+            [java-time :as time]
+            [me.raynes.fs :as fs])
+  (:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
+            Level Logger WriterAppender]))
 
 ;; TODO - should use Log4j v2, now using v1.
 
@@ -65,7 +64,7 @@
   ([level forms]
    (log (get-logger *err*) level forms)))
 
-(defmacro log-fn
+(defmacro def-log-function
   "Macro to create a logging function for a level"
   [level]
   `(defn ~level
@@ -73,12 +72,12 @@
      [& forms#]
      (log ~(keyword level) forms#)))
 
-(log-fn trace)
-(log-fn debug)
-(log-fn info)
-(log-fn warn)
-(log-fn error)
-(log-fn fatal)
+(def-log-function trace)
+(def-log-function debug)
+(def-log-function info)
+(def-log-function warn)
+(def-log-function error)
+(def-log-function fatal)
 
 (defn close
   "Close the currently active logger and appenders.
@@ -200,7 +199,7 @@
          file nil
          pattern "%h/log/%n-%d.log"
          location nil
-         overwrite false}    }]
+         overwrite false}}]
   (let [pattern (if location
                   (to-pattern location)
                   pattern)
