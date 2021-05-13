@@ -31,7 +31,7 @@
                (-> logfile
                    slurp
                    remove-timestamps))
-             => "[INFO ] Logging to: log1.out\n[INFO ] Log at info 1\n")
+             => "[INFO ] Log at info 1\n")
 
  (midje/fact "Test logger function incl debug, also to file"
              (let [logfile "log2.out"]
@@ -43,7 +43,7 @@
                (-> logfile
                    slurp
                    remove-timestamps))
-             => (str "[INFO ] Logging to: log2.out\n[INFO ] "
+             => (str "[DEBUG] Logging to: log2.out\n[INFO ] "
                      "Log at info 2\n[DEBUG] Log at debug 2\n"))
 
  ;; only to stdout/err, not to a file.

@@ -119,7 +119,7 @@
   default logfile and loglevel. If no logfile is provided, logs to
   stderr only.
   Should be able to handle multiple init calls.
-  Return logger created (or re-used)"
+  Return map with keys for logger created (or re-used) and logfile name"
   ([logfile loglevel]
    (let [logger (if logfile
                   (get-logger! logfile)
@@ -129,8 +129,8 @@
      (.addAppender logger (err-appender))
      (when logfile
        (.addAppender logger (rotating-appender logfile))
-       (info "Logging to:" logfile))
-     logger))
+       (debug "Logging to:" logfile))
+     {:logger logger :logfile logfile}))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
@@ -185,6 +185,9 @@
   if all of file, pattern and location are nil, do not create a
   logfile, just log to the console.
 
+  Return map with keys for logger created and logfile name. logfile contains
+  forward slashes only, even on Windows.
+
   To use in pattern:
    - %h = home dir
    - %c = current dir
@@ -202,7 +205,7 @@
                   (to-pattern location)
                   pattern)
         path (if file
-               (-> file fs/expand-home fs/absolute str)
+               (-> file fs/expand-home fs/absolute str (str/replace "\\" "/"))
                (to-log-file opts pattern))]
     (when overwrite
       (fs/delete path))
