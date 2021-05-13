@@ -1,4 +1,4 @@
-(defproject ndevreeze/logger "0.5.0"
+(defproject ndevreeze/logger "0.5.1"
   :description "Small log4j logging wrapper"
   :url "https://github.com/ndevreeze/logger"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
