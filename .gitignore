@@ -12,3 +12,4 @@ pom.xml.asc
 .hg/
 git-add-commit.sh
 .eastwood
+lint.txt
