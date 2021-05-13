@@ -13,3 +13,4 @@ pom.xml.asc
 git-add-commit.sh
 .eastwood
 lint.txt
+*/.cache
