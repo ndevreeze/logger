@@ -63,4 +63,14 @@
                (log/debug "Log at debug 4")
                (log/close)
                13)
-             => 13))
+             => 13)
+
+ (midje/fact "Test to-pattern"
+             (log/to-pattern :home)
+             => "%h/log/%n-%d.log")
+
+ (midje/fact "Test to-pattern dir"
+             (log/to-pattern "/tmp")
+             => "/tmp/%n-%d.log")
+
+ )

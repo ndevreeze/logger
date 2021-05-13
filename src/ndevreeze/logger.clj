@@ -134,12 +134,15 @@
   ([] (init-internal nil :info)))
 
 (defn to-pattern
-  "Convert pattern shortcut to an actual pattern for a log file"
-  [pattern]
-  (get {:home   "%h/log/%n-%d.log"
-        :cwd    "%c/log/%n-%d.log"
-        :script "%s/log/%n-%d.log"
-        :temp   "%t/log/%n-%d.log"} pattern))
+  "Convert location (pattern shortcut) to an actual pattern for a log file.
+   Or if location is not a keyword (but a string), treat it as a directory"
+  [location]
+  (if (keyword? location)
+    (get {:home   "%h/log/%n-%d.log"
+          :cwd    "%c/log/%n-%d.log"
+          :script "%s/log/%n-%d.log"
+          :temp   "%t/log/%n-%d.log"} location)
+    (str location "/%n-%d.log")))
 
 (defn current-date-time
   "Return current date and time in format yyyy-mm-ddTHH-MM-SS, based on
@@ -223,7 +226,7 @@
   file      - give an explicit full path. Default is nil, use pattern
   pattern   - use a pattern for the log file path, see below
   location  - some pattern defaults/shortcuts, :home, :cwd, :script, :temp,
-              default is nil
+              Or a directory as string. default is nil
   name      - script name, \"script\" bij default
   cwd       - give an explicit current-working-dir, default is nil
   overwrite - boolean, overwrite an existing log file, default false
