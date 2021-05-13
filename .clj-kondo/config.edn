@@ -1,0 +1,1 @@
+{:lint-as {ndevreeze.logger/def-log-function clojure.core/def}}
