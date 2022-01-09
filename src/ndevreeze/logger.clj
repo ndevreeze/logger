@@ -2,14 +2,29 @@
   "Simple logging functions.
   Similar to onelog, and also used clj-logging-config for
   inspiration. Now use a logger per *err* stream. *err* gets a new
-  binding for each nRepl session, and so for each script run."
+  binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
             [java-time :as time]
             [me.raynes.fs :as fs])
-  (:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
-            Level Logger WriterAppender]))
+  #_(:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
+              Level Logger WriterAppender])
+  (:import [org.apache.logging.log4j LogManager Logger Level]
+           [org.apache.logging.log4j.message Message]
+           [org.apache.logging.log4j.core.appender ConsoleAppender ConsoleAppender$Target
+            WriterAppender]
+           [org.apache.logging.log4j.core.config Configurator]
+           [org.apache.logging.log4j.core.config.builder.api AppenderComponentBuilder
+            ComponentBuilder ConfigurationBuilder ConfigurationBuilderFactory
+            LayoutComponentBuilder RootLoggerComponentBuilder]
+           [org.apache.logging.log4j.core.config.builder.impl BuiltConfiguration]
+           [org.apache.logging.log4j.core.layout PatternLayout]
+           [java.io StringWriter PrintWriter])
+  )
 
-;; TODO - should use Log4j v2, now using v1.
+
+
+
+;; ./log4j-core/src/main/java/org/apache/logging/log4j/core/appender/WriterAppender.java
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def log-format
@@ -79,40 +94,153 @@
 (def-log-function error)
 (def-log-function fatal)
 
+(defn- remove-all-appenders!
+  "Simulate v1 method"
+  [logger]
+  (doseq [appender (vals (.getAppenders logger))]
+    (.removeAppender logger appender)))
+
 (defn close
   "Close the currently active logger and appenders.
    Connected to *err*"
   []
   (let [logger (get-logger *err*)]
-    (.removeAllAppenders logger)
+    (remove-all-appenders! logger)
     (unregister-logger! *err*)))
 
+(defn- get-config-builder!
+  []
+  (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)]
+    (.setStatusLevel builder Level/DEBUG)
+    (.setConfigurationName builder "DefaultLogger")
+    builder))
+
+(defn get-pattern-layout!
+  [config-builder]
+  (let [layout (.newLayout config-builder "PatternLayout")]
+    (.addAttribute layout "pattern" log-format)
+    layout))
+
+;; DEFAULT_TARGET =  Target.SYSTEM_OUT;
+(defn- get-console-appender-builder!
+  [config-builder]
+  (let [appender-builder (.newAppender config-builder "Console" "CONSOLE")
+        layout (get-pattern-layout! config-builder)]
+    (.addAttribute appender-builder "target" ConsoleAppender$Target/SYSTEM_OUT)
+    (.add appender-builder layout)
+    appender-builder))
+
+(defn- get-error-appender-builder!
+  [config-builder]
+  (let [appender-builder (.newAppender config-builder "Error" "ERROR")
+        layout (get-pattern-layout! config-builder)]
+    (.addAttribute appender-builder "target" *err*)
+    (.add appender-builder layout)
+    appender-builder))
+
+(defn- get-root-logger!
+  [config-builder]
+  (let [root-logger (.newRootLogger config-builder Level/DEBUG)]
+    (.add root-logger (.newAppenderRef config-builder "Console"))
+    root-logger))
+
+;; for now no triggering Policy
 (defn- rotating-appender
   "Returns a logging adapter that rotates the logfile nightly
   at about midnight."
-  [logfile]
-  (DailyRollingFileAppender.
-   (EnhancedPatternLayout. log-format)
-   logfile
-   ".yyyy-MM-dd"))
+  [config-builder root-logger logfile]
+  (let [app-builder (.newAppender config-builder "LogToRollingFile" "RollingFile")]
+    (.addAttribute app-builder "fileName" logfile)
+    (.addAttribute app-builder "filePattern" (str logfile "-%d{MM-dd-yy-HH-mm-ss}.log."))
+    (.add app-builder (get-pattern-layout! config-builder))
+    ;;   rootLogger.add(builder.newAppenderRef("LogToRollingFile"));
+
+    app-builder))
+
+;; 2022-01-09: not sure if I need this init-your-logger and the functions it calls.
+;; Configurator.reconfigure(builder.build());
+(defn init-your-logger
+  [filename pattern]
+  (let [config-builder (get-config-builder!)
+        appender-builder (get-console-appender-builder! config-builder)
+        root-logger (get-root-logger! config-builder)
+        rotating-builder (rotating-appender config-builder root-logger filename)]
+    (.add config-builder appender-builder)
+    (.add root-logger (.newAppenderRef config-builder "LogToRollingFile")) ;; logfile.
+    (.add config-builder root-logger)
+    (Configurator/reconfigure (.build config-builder))
+    root-logger))
+
+;; some test functions to learn how to use Log4j2, including builders, root-loggers and other loggers.
+(defn log4j2-test
+  []
+  (init-your-logger "log4j2-test.log" log-format)
+  (let [logger (LogManager/getLogger "Console")]
+    (.debug logger "Hello from Log4j2"))
+
+  8)
+
 
 (defn- err-appender
   "Returns a logging adapter that logs to the console (stderr),
   connected to *err*"
-  []
-  (WriterAppender.
-   (EnhancedPatternLayout. log-format)
-   *err*))
+  [config-builder]
+  (get-error-appender-builder! config-builder))
+
+;; old v1 version.
+#_(defn- err-appender
+    "Returns a logging adapter that logs to the console (stderr),
+  connected to *err*"
+    []
+    (WriterAppender.
+     (EnhancedPatternLayout. log-format)
+     *err*))
+
+;; old v1:
+#_(defn- get-logger!
+    "get log4j logger, so appenders can be set.
+   based on name, create new one if it does not exist yet.
+   Also register the logger in the atom loggers"
+    [logger-name]
+    (let [logger (Logger/getLogger logger-name)]
+      (register-logger! *err* logger)
+      logger))
 
 (defn- get-logger!
   "get log4j logger, so appenders can be set.
    based on name, create new one if it does not exist yet.
    Also register the logger in the atom loggers"
   [logger-name]
-  (let [logger (Logger/getLogger logger-name)]
+  (let [logger (LogManager/getLogger logger-name)]
     (register-logger! *err* logger)
     logger))
 
+(comment
+  "Logger classes:
+
+  /**
+     * This method is not exposed through the public API and is used primarily for unit testing.
+     *
+     * @param appender The Appender to remove from the Logger.
+     */
+    public void removeAppender(final Appender appender) {
+        privateConfig.loggerConfig.removeAppender(appender.getName());
+    }
+
+    /**
+     * This method is not exposed through the public API and is used primarily for unit testing.
+     *
+     * @return A Map containing the Appender's name as the key and the Appender as the value.
+     */
+    public Map<String, Appender> getAppenders() {
+        return privateConfig.loggerConfig.getAppenders();
+    }
+"
+  )
+
+
+
+;; rootLogger.add(builder.newAppenderRef("Console"));
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
@@ -120,15 +248,23 @@
   Should be able to handle multiple init calls.
   Return map with keys for logger created (or re-used) and logfile name"
   ([logfile loglevel]
-   (let [logger (if logfile
+   (let [config-builder (get-config-builder!)
+         root-logger (get-root-logger! config-builder)
+         logger (if logfile
                   (get-logger! logfile)
                   (get-logger! (str *err*)))]
      (.setLevel logger (as-level loglevel))
-     (.removeAllAppenders logger)
-     (.addAppender logger (err-appender))
+     #_(.removeAllAppenders logger)
+     (remove-all-appenders! logger)
+     ;; rootLogger.add(builder.newAppenderRef("LogToRollingFile"));
+     ;; (.addAppender logger (.build (err-appender config-builder)))
+     (.add root-logger (.newAppenderRef config-builder "Error"))
+     #_(.add logger (.newAppenderRef config-builder "Error"))
      (when logfile
-       (.addAppender logger (rotating-appender logfile))
+       #_(.addAppender logger (rotating-appender config-builder root-logger logfile))
+       (rotating-appender config-builder root-logger logfile)
        (debug "Logging to:" logfile))
+     (Configurator/reconfigure (.build config-builder))
      {:logger logger :logfile logfile}))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
@@ -247,3 +383,66 @@
      (init-internal par1 :info)))
   ([logfile loglevel] (init-internal logfile loglevel))
   ([] (init-internal nil :info)))
+
+;;;;;;;;;;;;;;;;;;;;
+;; Baelding test, everything below. If it works, we can merge
+;;;;;;;;;;;;;;;;;;;;
+
+
+(defn baeldung-test
+  []
+  ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
+  (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)
+        console (.newAppender builder "stdout" "Console")
+        file (.newAppender builder "log" "File")
+        ;;        rolling (.newAppender builder "rolling" "RollingFile")
+        standard (.newLayout builder "PatternLayout")
+        root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
+        logger (.newLogger builder "com" Level/DEBUG)
+        ]
+    (.add builder console)
+    (.addAttribute file "fileName" "target/logging.log")
+    (.add builder file)
+    ;;    (.addAttribute rolling "fileName" "rolling.log")
+    ;;    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
+    ;;    (.add builder rolling)
+    (.addAttribute standard "pattern" "%d [%t] %-5level: %msg%n%throwable")
+    (.add console standard)
+    (.add file standard)
+    ;;    (.add rolling standard)
+
+    (.add root-logger (.newAppenderRef builder "stdout"))
+    (.add builder root-logger)
+
+    (.add logger (.newAppenderRef builder "log"))
+    (.addAttribute logger "additivity" false)
+    (.add builder logger)
+
+    ;; builder.writeXmlConfiguration(System.out);
+    (.writeXmlConfiguration builder System/out)
+
+    ;; Configurator.initialize(builder.build());
+    ;; vorige deed een reconfigure, voor beiden iets te zeggen.
+    (Configurator/initialize (.build builder))
+
+    (let [logger (LogManager/getLogger "Console")]
+      (.error logger "Hello from Log4j2 with error"))
+
+    (let [logger (LogManager/getLogger "log")]
+      (.error logger "Hello from Log4j2 with getlogger log"))
+
+    (let [logger (LogManager/getLogger "com")]
+      (.error logger "Hello from Log4j2 with getlogger com"))
+
+    (let [logger (LogManager/getLogger "bla")]
+      (.error logger "Hello from Log4j2 with getlogger bla")
+      (println "logger: " logger))
+
+    ;; root-logger is a builder, cannot use.
+    #_(.error root-logger "Hello from root-logger")
+
+
+    )
+
+
+  9)

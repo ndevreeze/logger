@@ -96,9 +96,13 @@ See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html
 
 * https://github.com/pjlegato/onelog - used as a base for this library, but some differences.
 * https://github.com/malcolmsparks/clj-logging-config - also used as a base
-    
+
+## Version history
+
+* 0.6.0 - use Log4J 2.17.1
+
 ## License
 
-Copyright © 2020, 2021 Nico de Vreeze
+Copyright © 2020, 2021, 2022 Nico de Vreeze.
 
 Distributed under the Eclipse Public License, the same as Clojure.
