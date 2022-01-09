@@ -388,7 +388,9 @@
 ;; Baelding test, everything below. If it works, we can merge
 ;;;;;;;;;;;;;;;;;;;;
 
-
+;; maak dingen als layout compleet, voordat je ze aan appenders
+;; toevoegt. En ook hierna pas appenders aan de builder toevoegen.
+;; volgorde is idd belangrijk: de layouts worden gekopieerd naar de appenders.
 (defn baeldung-test
   []
   ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
@@ -400,9 +402,6 @@
         root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
         logger (.newLogger builder "com" Level/DEBUG)
         ]
-    (.add builder console)
-    (.addAttribute file "fileName" "target/logging.log")
-    (.add builder file)
     ;;    (.addAttribute rolling "fileName" "rolling.log")
     ;;    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
     ;;    (.add builder rolling)
@@ -410,6 +409,11 @@
     (.add console standard)
     (.add file standard)
     ;;    (.add rolling standard)
+
+    (.add builder console)
+
+    (.addAttribute file "fileName" "target/logging.log")
+    (.add builder file)
 
     (.add root-logger (.newAppenderRef builder "stdout"))
     (.add builder root-logger)
@@ -424,6 +428,9 @@
     ;; Configurator.initialize(builder.build());
     ;; vorige deed een reconfigure, voor beiden iets te zeggen.
     (Configurator/initialize (.build builder))
+
+    #_(println "config after initialize:")
+    #_(.writeXmlConfiguration builder System/out)
 
     (let [logger (LogManager/getLogger "Console")]
       (.error logger "Hello from Log4j2 with error"))
@@ -446,3 +453,62 @@
 
 
   9)
+
+;; orig, zoveel mogelijk de java volgorde.
+#_(defn baeldung-test
+    []
+    ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
+    (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)
+          console (.newAppender builder "stdout" "Console")
+          file (.newAppender builder "log" "File")
+          ;;        rolling (.newAppender builder "rolling" "RollingFile")
+          standard (.newLayout builder "PatternLayout")
+          root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
+          logger (.newLogger builder "com" Level/DEBUG)
+          ]
+      (.add builder console)
+      (.addAttribute file "fileName" "target/logging.log")
+      (.add builder file)
+      ;;    (.addAttribute rolling "fileName" "rolling.log")
+      ;;    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
+      ;;    (.add builder rolling)
+      (.addAttribute standard "pattern" "%d [%t] %-5level: %msg%n%throwable")
+      (.add console standard)
+      (.add file standard)
+      ;;    (.add rolling standard)
+
+      (.add root-logger (.newAppenderRef builder "stdout"))
+      (.add builder root-logger)
+
+      (.add logger (.newAppenderRef builder "log"))
+      (.addAttribute logger "additivity" false)
+      (.add builder logger)
+
+      ;; builder.writeXmlConfiguration(System.out);
+      (.writeXmlConfiguration builder System/out)
+
+      ;; Configurator.initialize(builder.build());
+      ;; vorige deed een reconfigure, voor beiden iets te zeggen.
+      (Configurator/initialize (.build builder))
+
+      (let [logger (LogManager/getLogger "Console")]
+        (.error logger "Hello from Log4j2 with error"))
+
+      (let [logger (LogManager/getLogger "log")]
+        (.error logger "Hello from Log4j2 with getlogger log"))
+
+      (let [logger (LogManager/getLogger "com")]
+        (.error logger "Hello from Log4j2 with getlogger com"))
+
+      (let [logger (LogManager/getLogger "bla")]
+        (.error logger "Hello from Log4j2 with getlogger bla")
+        (println "logger: " logger))
+
+      ;; root-logger is a builder, cannot use.
+      #_(.error root-logger "Hello from root-logger")
+
+
+      )
+
+
+    9)
