@@ -23,7 +23,8 @@ builder.add(appenderBuilder);
 // create a rolling file appender
 LayoutComponentBuilder layoutBuilder = builder.newLayout("PatternLayout")
                 .addAttribute("pattern", pattern);
-        ComponentBuilder triggeringPolicy = builder.newComponent("Policies")
+
+ComponentBuilder triggeringPolicy = builder.newComponent("Policies")
                 .addComponent(builder.newComponent("SizeBasedTriggeringPolicy").addAttribute("size", "1KB"));
         appenderBuilder = builder.newAppender("LogToRollingFile", "RollingFile")
                 .addAttribute("fileName", fileName)
@@ -109,7 +110,16 @@ builder.add(logger);
 Note that we can set additivity with our loggers, which indicates whether this logger should inherit properties like logging level and appender types from its ancestors.
 
     // 3.6. Configuring Other Components -> nog even niet, trigger for rollingfileappender.
+    // 2022-01-10: wil ik nu wel want anders fout op rollingfileappender
+    ComponentBuilder triggeringPolicies = builder.newComponent("Policies")
+    .addComponent(builder.newComponent("CronTriggeringPolicy")
+                  .addAttribute("schedule", "0 0 0 * * ?"))
+    .addComponent(builder.newComponent("SizeBasedTriggeringPolicy")
+                  .addAttribute("size", "100M"));
 
-    //  Configurator.initialize(builder.build());
+rolling.addComponent(triggeringPolicies);
 
-    // geen calls verder over hoe het aan te roepen.
+
+//  Configurator.initialize(builder.build());
+
+// geen calls verder over hoe het aan te roepen.

@@ -395,25 +395,36 @@
   []
   ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
   (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)
+        standard (.newLayout builder "PatternLayout")
         console (.newAppender builder "stdout" "Console")
         file (.newAppender builder "log" "File")
-        ;;        rolling (.newAppender builder "rolling" "RollingFile")
-        standard (.newLayout builder "PatternLayout")
+        triggering-policies (.newComponent builder "Policies")
+        cron-trig-policy (.newComponent builder "CronTriggeringPolicy")
+        size-trig-policy (.newComponent builder "SizeBasedTriggeringPolicy")
+        rolling (.newAppender builder "rolling" "RollingFile")
+
         root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
         logger (.newLogger builder "com" Level/DEBUG)
         ]
-    ;;    (.addAttribute rolling "fileName" "rolling.log")
-    ;;    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
-    ;;    (.add builder rolling)
     (.addAttribute standard "pattern" "%d [%t] %-5level: %msg%n%throwable")
     (.add console standard)
     (.add file standard)
-    ;;    (.add rolling standard)
+    (.add rolling standard)
 
     (.add builder console)
 
     (.addAttribute file "fileName" "target/logging.log")
     (.add builder file)
+
+    (.addAttribute rolling "fileName" "rolling.log")
+    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
+
+    (.addAttribute cron-trig-policy "schedule" "0 0 0 * * ?")
+    (.addAttribute size-trig-policy "size" "100M")
+    (.addComponent triggering-policies cron-trig-policy)
+    (.addComponent triggering-policies size-trig-policy)
+    (.addComponent rolling triggering-policies)
+    (.add builder rolling)
 
     (.add root-logger (.newAppenderRef builder "stdout"))
     (.add builder root-logger)
@@ -433,16 +444,16 @@
     #_(.writeXmlConfiguration builder System/out)
 
     (let [logger (LogManager/getLogger "Console")]
-      (.error logger "Hello from Log4j2 with error"))
+      (.info logger "Hello from Log4j2 with info"))
 
     (let [logger (LogManager/getLogger "log")]
-      (.error logger "Hello from Log4j2 with getlogger log"))
+      (.info logger "Hello from Log4j2 with getlogger log"))
 
     (let [logger (LogManager/getLogger "com")]
-      (.error logger "Hello from Log4j2 with getlogger com"))
+      (.info logger "Hello from Log4j2 with getlogger com"))
 
     (let [logger (LogManager/getLogger "bla")]
-      (.error logger "Hello from Log4j2 with getlogger bla")
+      (.info logger "Hello from Log4j2 with getlogger bla")
       (println "logger: " logger))
 
     ;; root-logger is a builder, cannot use.
