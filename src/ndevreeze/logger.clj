@@ -438,23 +438,68 @@
 
     ;; Configurator.initialize(builder.build());
     ;; vorige deed een reconfigure, voor beiden iets te zeggen.
-    (Configurator/initialize (.build builder))
+    (let [logger-context (Configurator/initialize (.build builder))]
 
-    #_(println "config after initialize:")
-    #_(.writeXmlConfiguration builder System/out)
+      #_(println "config after initialize:")
+      #_(.writeXmlConfiguration builder System/out)
 
-    (let [logger (LogManager/getLogger "Console")]
-      (.info logger "Hello from Log4j2 with info"))
+      (let [logger2 (LogManager/getLogger "Console")]
+        (.info logger2 "Hello from Log4j2 with info"))
 
-    (let [logger (LogManager/getLogger "log")]
-      (.info logger "Hello from Log4j2 with getlogger log"))
+      (let [logger2 (LogManager/getLogger "log")]
+        (.info logger2 "Hello from Log4j2 with getlogger log"))
 
-    (let [logger (LogManager/getLogger "com")]
-      (.info logger "Hello from Log4j2 with getlogger com"))
+      (let [logger2 (LogManager/getLogger "com")]
+        (.info logger2 "Hello from Log4j2 with getlogger com"))
 
-    (let [logger (LogManager/getLogger "bla")]
-      (.info logger "Hello from Log4j2 with getlogger bla")
-      (println "logger: " logger))
+      ;; the config logger is different, cannot use here.
+      ;; (.info logger "Hello from Log4j2 with config logger")
+
+      (let [logger2 (LogManager/getLogger "bla")]
+        (.info logger2 "Hello from Log4j2 with getlogger bla")
+        (println "logger: " logger2))
+
+
+
+      ;; create a new logger to a new file after these first logs.
+      ;; log something that only goes to this new file.
+      (let [file2 (.newAppender builder "log2" "File")
+            logger2 (.newLogger builder "com2" Level/INFO)]
+        (.add file2 standard)
+        (.addAttribute file2 "fileName" "target/logging2.log")
+        (.add builder file2)
+        (.add logger2 (.newAppenderRef builder "log2"))
+        (.addAttribute logger2 "additivity" false)
+        (.add builder logger2)
+
+        ;; builder.writeXmlConfiguration(System.out);
+        (.writeXmlConfiguration builder System/out)
+
+        ;; Configurator.initialize(builder.build());
+        ;; vorige deed een reconfigure, voor beiden iets te zeggen.
+        ;; 2022-01-10: check of dit init moet worden, of reconfig.
+        ;; 2022-01-10: lijkt geen initialize te zijn, dan com2 gewoon naar Console, en niet naar file.
+        #_(Configurator/initialize (.build builder))
+        (Configurator/reconfigure)
+        #_(Configurator/reconfigure (.build builder))
+
+        #_(println "config after initialize:")
+        #_(.writeXmlConfiguration builder System/out)
+
+        (let [logger2 (LogManager/getLogger "com")]
+          (.info logger2 "Hello from Log4j2 with getlogger com"))
+
+        (let [logger2a (LogManager/getLogger "com2")]
+          (.info logger2a "Hello from Log4j2 with getlogger com2"))
+
+        (let [logger2a (LogManager/getLogger "log2")]
+          (.info logger2a "Hello from Log4j2 with getlogger log2"))
+
+        )
+      (Configurator/shutdown logger-context)
+      )
+
+
 
     ;; root-logger is a builder, cannot use.
     #_(.error root-logger "Hello from root-logger")
