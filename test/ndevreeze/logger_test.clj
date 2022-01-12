@@ -84,9 +84,13 @@
                (log/log4j2-test)
                => 8)
 
- (midje/fact "Bealdung test to file"
-             (log/baeldung-test)
-             => 9)
+ #_(midje/fact "Bealdung test to file"
+               (log/baeldung-test)
+               => 9)
+
+ (midje/fact "Widd test to file"
+             (log/widd-test)
+             => 10)
 
 
 

@@ -5,6 +5,8 @@
   binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
             [java-time :as time]
+            [com.widdindustries.log4j2.log-api :as log] ; TODO: rename to api or widd.
+            [com.widdindustries.log4j2.config :as config]
             [me.raynes.fs :as fs])
   #_(:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
               Level Logger WriterAppender])
@@ -18,11 +20,11 @@
             LayoutComponentBuilder RootLoggerComponentBuilder]
            [org.apache.logging.log4j.core.config.builder.impl BuiltConfiguration]
            [org.apache.logging.log4j.core.layout PatternLayout]
-           [java.io StringWriter PrintWriter])
+           [java.io StringWriter PrintWriter]
+
+           ;; example from widd:
+           [org.apache.logging.log4j.message MapMessage])
   )
-
-
-
 
 ;; ./log4j-core/src/main/java/org/apache/logging/log4j/core/appender/WriterAppender.java
 
@@ -87,6 +89,7 @@
      [& forms#]
      (log ~(keyword level) forms#)))
 
+;; TODO: define with doseq on level?
 (def-log-function trace)
 (def-log-function debug)
 (def-log-function info)
@@ -568,3 +571,110 @@
 
 
     9)
+
+
+(defn std-out-appender [builder appender-name pattern]
+  (-> builder
+      (.newAppender appender-name, "CONSOLE")
+      (.addAttribute "target" ConsoleAppender$Target/SYSTEM_OUT)
+      (.add (-> (.newLayout builder "PatternLayout")
+                (.addAttribute "pattern", pattern)))))
+
+(defn std-err-appender [builder appender-name pattern]
+  (-> builder
+      (.newAppender appender-name, "CONSOLE")
+      (.addAttribute "target" ConsoleAppender$Target/SYSTEM_ERR)
+      (.add (-> (.newLayout builder "PatternLayout")
+                (.addAttribute "pattern", pattern)))))
+
+(defn file-appender [builder appender-name pattern filename]
+  (-> builder
+      (.newAppender appender-name, "File")
+      (.addAttribute "fileName" filename)
+      (.add (-> (.newLayout builder "PatternLayout")
+                (.addAttribute "pattern", pattern)))))
+
+(defn new-logger [builder level ref logger-name]
+  (->
+   (.newLogger builder logger-name level)
+   (.add (.newAppenderRef builder ref))
+   (.addAttribute "additivity", false)))
+
+(defn root-logger [builder level ref]
+  (-> (.newRootLogger builder level)
+      (.add (.newAppenderRef builder ref))))
+
+(defn root-logger2 [builder level]
+  (-> (.newRootLogger builder level)))
+
+;; the equivalent of having magic xml file on classpath
+(defn setup-logging2 []
+  (let [builder (config/builder)
+;;        std-out-appender-name "Stdout"
+        std-err-app-name "Stderr"
+        file-app-name "file"
+        logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
+                   (.addAttribute "additivity" false))]
+    (-> builder
+        #_(.add (std-out-appender builder std-out-appender-name
+                                  "%date %level %logger %message%n%throwable"))
+        (.add (std-err-appender builder std-err-app-name
+                                "%date %level %logger %message%n%throwable"))
+        (.add (file-appender builder file-app-name
+                             "%date %level %logger %message%n%throwable"
+                             "target/logfile.log"))
+        #_(.add (root-logger builder org.apache.logging.log4j.Level/INFO std-out-appender-name))
+        (.add (root-logger2 builder org.apache.logging.log4j.Level/INFO))
+
+        (.add (-> logger
+                  (.add (.newAppenderRef builder std-err-app-name))
+                  (.add (.newAppenderRef builder file-app-name))))
+        #_(.add (config/logger builder Level/DEBUG file-app-name "ndevreeze.logger"))
+        #_(.add (config/logger builder Level/DEBUG std-err-app-name "ndevreeze.logger"))
+
+        (config/start))
+    (.writeXmlConfiguration builder System/out)))
+
+;; orig version from https://github.com/henryw374/clojure.log4j2
+#_(defn setup-logging []
+    (let [builder (config/builder)
+          std-out-appender-name "Stdout"]
+      (-> builder
+          (.add (config/std-out-appender builder std-out-appender-name
+                                         "%date %level %logger %message%n%throwable"))
+          (.add (config/root-logger builder org.apache.logging.log4j.Level/INFO std-out-appender-name))
+          (.add (config/logger builder Level/DEBUG std-out-appender-name "ndevreeze.logger"))
+
+          (config/start))
+      ;; need to do write after config/start, apparently.
+      (.writeXmlConfiguration builder System/out)
+
+      ))
+
+(defn widd-test
+  "Using code from https://github.com/henryw374/clojure.log4j2"
+  []
+  (setup-logging2)
+
+  ;;clojure maps wrapped in MapMessage object - top level keys must be Named (string, keyword, symbol etc)
+  (log/info {"foo" "bar"})
+
+  ;;log a string
+  (log/info "hello")
+
+  ;;log a Message - this is how you 'log data'
+  (log/info (MapMessage. {"foo" "bar"}))
+
+  ;; varargs arity is for formatted string only
+  (log/info "hello {} there" :foo)
+
+  ;; builder - include throwable|marker|location
+  (-> (log/info-builder)
+      (log/with-location)
+      (log/with-throwable *e)
+      ;; finally log string or Message etc
+      (log/log {"foo" "bar"}))
+
+  ;; change log level to trace
+  (log/set-level 'ndevreeze.logger :trace)
+  10)

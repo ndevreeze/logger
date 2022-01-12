@@ -9,6 +9,9 @@
                  [org.apache.logging.log4j/log4j-core "2.17.1"]
                  [org.apache.logging.log4j/log4j-api "2.17.1"]
                  [org.apache.logging.log4j/log4j-1.2-api "2.17.1"] ;; might be handy.
+
+                 [com.widdindustries/clojure.log4j2 "0.1.9"] ;; prb just this one needed.
+
                  [clojure.java-time "0.3.2"] ;;; new in Java 8, replacing Joda-time
                                              ;;; and clj-time
                  ]
