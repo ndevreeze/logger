@@ -600,63 +600,37 @@
    (.add (.newAppenderRef builder ref))
    (.addAttribute "additivity", false)))
 
-(defn root-logger [builder level ref]
-  (-> (.newRootLogger builder level)
-      (.add (.newAppenderRef builder ref))))
-
-(defn root-logger2 [builder level]
+(defn root-logger [builder level]
   (-> (.newRootLogger builder level)))
 
 ;; the equivalent of having magic xml file on classpath
 (defn setup-logging2 []
   (let [builder (config/builder)
-;;        std-out-appender-name "Stdout"
         std-err-app-name "Stderr"
         file-app-name "file"
         logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
                    (.addAttribute "additivity" false))]
     (-> builder
-        #_(.add (std-out-appender builder std-out-appender-name
-                                  "%date %level %logger %message%n%throwable"))
         (.add (std-err-appender builder std-err-app-name
                                 "%date %level %logger %message%n%throwable"))
         (.add (file-appender builder file-app-name
                              "%date %level %logger %message%n%throwable"
                              "target/logfile.log"))
-        #_(.add (root-logger builder org.apache.logging.log4j.Level/INFO std-out-appender-name))
-        (.add (root-logger2 builder org.apache.logging.log4j.Level/INFO))
-
+        (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
         (.add (-> logger
                   (.add (.newAppenderRef builder std-err-app-name))
                   (.add (.newAppenderRef builder file-app-name))))
-        #_(.add (config/logger builder Level/DEBUG file-app-name "ndevreeze.logger"))
-        #_(.add (config/logger builder Level/DEBUG std-err-app-name "ndevreeze.logger"))
-
         (config/start))
     (.writeXmlConfiguration builder System/out)))
-
-;; orig version from https://github.com/henryw374/clojure.log4j2
-#_(defn setup-logging []
-    (let [builder (config/builder)
-          std-out-appender-name "Stdout"]
-      (-> builder
-          (.add (config/std-out-appender builder std-out-appender-name
-                                         "%date %level %logger %message%n%throwable"))
-          (.add (config/root-logger builder org.apache.logging.log4j.Level/INFO std-out-appender-name))
-          (.add (config/logger builder Level/DEBUG std-out-appender-name "ndevreeze.logger"))
-
-          (config/start))
-      ;; need to do write after config/start, apparently.
-      (.writeXmlConfiguration builder System/out)
-
-      ))
 
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
   (setup-logging2)
 
-  ;;clojure maps wrapped in MapMessage object - top level keys must be Named (string, keyword, symbol etc)
+  ;;clojure maps wrapped in MapMessage object - top level keys must be
+  ;; Named (string, keyword, symbol etc). All these logging functions
+  ;; use current namespace as the logger-ref.
   (log/info {"foo" "bar"})
 
   ;;log a string
