@@ -6,14 +6,17 @@
   (:require [clojure.string :as str]
             [java-time :as time]
             [com.widdindustries.log4j2.log-api :as log] ; TODO: rename to api or widd.
+            [com.widdindustries.log4j2.log-impl :as log-impl] ; TODO: rename to api or widd.
             [com.widdindustries.log4j2.config :as config]
+            [com.widdindustries.log4j2.testing :as testing]
             [me.raynes.fs :as fs])
   #_(:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
               Level Logger WriterAppender])
   (:import [org.apache.logging.log4j LogManager Logger Level]
            [org.apache.logging.log4j.message Message]
            [org.apache.logging.log4j.core.appender ConsoleAppender ConsoleAppender$Target
-            WriterAppender]
+            WriterAppender FileAppender]
+           [org.apache.logging.log4j.core LoggerContext Appender]
            [org.apache.logging.log4j.core.config Configurator]
            [org.apache.logging.log4j.core.config.builder.api AppenderComponentBuilder
             ComponentBuilder ConfigurationBuilder ConfigurationBuilderFactory
@@ -604,7 +607,7 @@
   (-> (.newRootLogger builder level)))
 
 ;; the equivalent of having magic xml file on classpath
-(defn setup-logging2 []
+(defn setup-logging-both []
   (let [builder (config/builder)
         std-err-app-name "Stderr"
         file-app-name "file"
@@ -621,34 +624,144 @@
                   (.add (.newAppenderRef builder std-err-app-name))
                   (.add (.newAppenderRef builder file-app-name))))
         (config/start))
-    (.writeXmlConfiguration builder System/out)))
+    (.writeXmlConfiguration builder System/out)
+    (println)))
+
+(defn setup-logging-stderr-half
+  "Create both appenders, but only add stderr to config."
+  []
+  (let [builder (config/builder)
+        std-err-app-name "Stderr"
+        file-app-name "file"
+        logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
+                   (.addAttribute "additivity" false))]
+    (-> builder
+        (.add (std-err-appender builder std-err-app-name
+                                "%date %level %logger %message%n%throwable"))
+        (.add (file-appender builder file-app-name
+                             "%date %level %logger %message%n%throwable"
+                             "target/logfile.log"))
+        (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
+        (.add (-> logger
+                  (.add (.newAppenderRef builder std-err-app-name)))))
+    (.newAppenderRef builder file-app-name) ;; create the ref, don't use it yet.
+    (let [context (config/start builder)]
+      (.writeXmlConfiguration builder System/out)
+      (println)
+      context)    ))
+
+(defn setup-logging-stderr []
+  (let [builder (config/builder)
+        std-err-app-name "Stderr"
+        logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
+                   (.addAttribute "additivity" false))]
+    (-> builder
+        (.add (std-err-appender builder std-err-app-name
+                                "%date %level %logger %message%n%throwable"))
+        (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
+        (.add (-> logger
+                  (.add (.newAppenderRef builder std-err-app-name)))))
+    (let [context (config/start builder)]
+      (.writeXmlConfiguration builder System/out)
+      (println)
+      context)))
+
+;; from testing:
+#_(defn memory-appender [state]
+    (proxy [AbstractAppender] [appender-name nil nil true, Property/EMPTY_ARRAY]
+      (append [^LogEvent event]
+        (state (logevent->data event)))))
+
+;; from widd/config:
+;; should this be an appender-config, an appender, or an appender-ref?
+(defn add-appender-to-running-context
+  ([appender] (add-appender-to-running-context appender (log-impl/context)))
+  ([^Appender appender ^LoggerContext context]
+   (.start appender)
+   (-> (.getConfiguration context)
+       (.addAppender appender))
+   (let [appender-from-ctx (-> (.getConfiguration context)
+                               (.getAppender (.getName appender)))]
+     (doseq [logger (config/get-loggers context)]
+       (.info config/status-logger (str "adding appender to " (.getName logger)))
+       (.addAppender logger appender-from-ctx)))
+   (.updateLoggers context)))
+
+(defn mk-record-event
+  []
+  (let [state (atom [])]
+    (->
+     (fn [event] (swap! state conj event))
+     (with-meta {:state state}))))
+
+(defn make-layout
+  "Dynamically create a Layout for a FileAppender, with a builder.
+   But not with a config"
+  [pattern]
+  (-> (PatternLayout/newBuilder)
+      (.withPattern pattern)
+      (.build)))
+
+(defn make-file-appender
+  "Dynamically create a file appender, with a builder.
+   Normally called after initial config is done."
+  [filename]
+  (-> (FileAppender/newBuilder)
+      (.setName "file")
+      (.withFileName filename)
+      (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
+      (.build)))
+
+(defn add-file-appender
+  "Dynamically add file appender after (config/start)"
+  [context]
+  (let [file-app-name "file"
+        ;;record-event (mk-record-event)
+        ;;app (testing/memory-appender record-event)
+        app (make-file-appender "target/logfile-dyn.log")
+        ]
+    (add-appender-to-running-context app context)))
 
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
-  (setup-logging2)
+  #_(setup-logging-both)
+  #_(def state (-> (testing/setup-recording-context) testing/context-state))
+  (let [context (setup-logging-stderr)]
 
-  ;;clojure maps wrapped in MapMessage object - top level keys must be
-  ;; Named (string, keyword, symbol etc). All these logging functions
-  ;; use current namespace as the logger-ref.
-  (log/info {"foo" "bar"})
+    ;;clojure maps wrapped in MapMessage object - top level keys must be
+    ;; Named (string, keyword, symbol etc). All these logging functions
+    ;; use current namespace as the logger-ref.
+    #_(log/info {"foo" "bar"})
 
-  ;;log a string
-  (log/info "hello")
+    ;;log a string
+    (log/info "hello")
 
-  ;;log a Message - this is how you 'log data'
-  (log/info (MapMessage. {"foo" "bar"}))
+    ;;log a Message - this is how you 'log data'
+    #_(log/info (MapMessage. {"foo" "bar"}))
 
-  ;; varargs arity is for formatted string only
-  (log/info "hello {} there" :foo)
+    ;; varargs arity is for formatted string only
+    #_(log/info "hello {} there" :foo)
 
-  ;; builder - include throwable|marker|location
-  (-> (log/info-builder)
-      (log/with-location)
-      (log/with-throwable *e)
-      ;; finally log string or Message etc
-      (log/log {"foo" "bar"}))
+    ;; builder - include throwable|marker|location
+    #_(-> (log/info-builder)
+          (log/with-location)
+          (log/with-throwable *e)
+          ;; finally log string or Message etc
+          (log/log {"foo" "bar"}))
 
-  ;; change log level to trace
-  (log/set-level 'ndevreeze.logger :trace)
+    ;; change log level to trace
+    (log/set-level 'ndevreeze.logger :trace)
+
+    (add-file-appender context)
+
+    (log/info "Appenders: {}" (config/get-appenders))
+    (log/info "context->data: {}" (config/context->data))
+
+    (log/info "Log after adding file appender")
+    (println "============================")
+    #_(println "@state after all logging: " @state)
+    (println "============================")
+    )
+
   10)
