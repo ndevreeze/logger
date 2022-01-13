@@ -678,7 +678,7 @@
                                (.getAppender (.getName appender)))]
      (doseq [logger (config/get-loggers context)]
        (.info config/status-logger (str "adding appender to " (.getName logger)))
-       (.addAppender logger appender-from-ctx)))
+       (.addAppender logger appender-from-ctx))     )
    (.updateLoggers context)))
 
 (defn mk-record-event
@@ -714,12 +714,22 @@
         ;;app (testing/memory-appender record-event)
         app (make-file-appender "target/logfile-dyn.log")
         ]
-    (add-appender-to-running-context app)))
+    (add-appender-to-running-context app)
+    app))
 
 (defn stop-logging
   "Stop logging, including closing log files"
   []
   (Configurator/shutdown (log-impl/context)))
+
+(defn stop-appender
+  "Stop appender and remove from config"
+  [app]
+  (.stop app)
+  (let [ctx (log-impl/context)]
+    (doseq [logger (config/get-loggers ctx)]
+      (.info config/status-logger (str "removing appender from " (.getName logger)))
+      (.removeAppender logger app))))
 
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
@@ -734,12 +744,17 @@
 
   (log/set-level 'ndevreeze.logger :trace)
 
-  (add-file-appender)
+  (let [app (add-file-appender)]
 
-  (log/info "Appenders: {}" (config/get-appenders))
-  (log/info "context->data: {}" (config/context->data))
+    (log/info "Appenders: {}" (config/get-appenders))
+    (log/info "context->data: {}" (config/context->data))
 
-  (log/info "Log after adding file appender")
+    (log/info "Log after adding file appender")
+
+    ;; prb also remove from context
+    (stop-appender app)
+    (log/info "Log after stopping file appender")
+    )
 
   (stop-logging)
 
