@@ -397,124 +397,124 @@
 ;; maak dingen als layout compleet, voordat je ze aan appenders
 ;; toevoegt. En ook hierna pas appenders aan de builder toevoegen.
 ;; volgorde is idd belangrijk: de layouts worden gekopieerd naar de appenders.
-(defn baeldung-test
-  []
-  ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
-  (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)
-        standard (.newLayout builder "PatternLayout")
-        console (.newAppender builder "stdout" "Console")
-        file (.newAppender builder "log" "File")
-        triggering-policies (.newComponent builder "Policies")
-        cron-trig-policy (.newComponent builder "CronTriggeringPolicy")
-        size-trig-policy (.newComponent builder "SizeBasedTriggeringPolicy")
-        rolling (.newAppender builder "rolling" "RollingFile")
+#_(defn baeldung-test
+    []
+    ;; builder = ConfigurationBuilderFactory.newConfigurationBuilder();
+    (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)
+          standard (.newLayout builder "PatternLayout")
+          console (.newAppender builder "stdout" "Console")
+          file (.newAppender builder "log" "File")
+          triggering-policies (.newComponent builder "Policies")
+          cron-trig-policy (.newComponent builder "CronTriggeringPolicy")
+          size-trig-policy (.newComponent builder "SizeBasedTriggeringPolicy")
+          rolling (.newAppender builder "rolling" "RollingFile")
 
-        root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
-        logger (.newLogger builder "com" Level/DEBUG)
-        ]
-    (.addAttribute standard "pattern" "%d [%t] %-5level: %msg%n%throwable")
-    (.add console standard)
-    (.add file standard)
-    (.add rolling standard)
+          root-logger (.newRootLogger builder Level/DEBUG) ;; was ERROR
+          logger (.newLogger builder "com" Level/DEBUG)
+          ]
+      (.addAttribute standard "pattern" "%d [%t] %-5level: %msg%n%throwable")
+      (.add console standard)
+      (.add file standard)
+      (.add rolling standard)
 
-    (.add builder console)
+      (.add builder console)
 
-    (.addAttribute file "fileName" "target/logging.log")
-    (.add builder file)
+      (.addAttribute file "fileName" "target/logging.log")
+      (.add builder file)
 
-    (.addAttribute rolling "fileName" "rolling.log")
-    (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
+      (.addAttribute rolling "fileName" "rolling.log")
+      (.addAttribute rolling "filePattern" "rolling-%d{MM-dd-yy}.log.gz")
 
-    (.addAttribute cron-trig-policy "schedule" "0 0 0 * * ?")
-    (.addAttribute size-trig-policy "size" "100M")
-    (.addComponent triggering-policies cron-trig-policy)
-    (.addComponent triggering-policies size-trig-policy)
-    (.addComponent rolling triggering-policies)
-    (.add builder rolling)
+      (.addAttribute cron-trig-policy "schedule" "0 0 0 * * ?")
+      (.addAttribute size-trig-policy "size" "100M")
+      (.addComponent triggering-policies cron-trig-policy)
+      (.addComponent triggering-policies size-trig-policy)
+      (.addComponent rolling triggering-policies)
+      (.add builder rolling)
 
-    (.add root-logger (.newAppenderRef builder "stdout"))
-    (.add builder root-logger)
+      (.add root-logger (.newAppenderRef builder "stdout"))
+      (.add builder root-logger)
 
-    (.add logger (.newAppenderRef builder "log"))
-    (.addAttribute logger "additivity" false)
-    (.add builder logger)
+      (.add logger (.newAppenderRef builder "log"))
+      (.addAttribute logger "additivity" false)
+      (.add builder logger)
 
-    ;; builder.writeXmlConfiguration(System.out);
-    (.writeXmlConfiguration builder System/out)
+      ;; builder.writeXmlConfiguration(System.out);
+      (.writeXmlConfiguration builder System/out)
 
-    ;; Configurator.initialize(builder.build());
-    ;; vorige deed een reconfigure, voor beiden iets te zeggen.
-    (let [logger-context (Configurator/initialize (.build builder))]
-
-      #_(println "config after initialize:")
-      #_(.writeXmlConfiguration builder System/out)
-
-      (let [logger2 (LogManager/getLogger "Console")]
-        (.info logger2 "Hello from Log4j2 with info"))
-
-      (let [logger2 (LogManager/getLogger "log")]
-        (.info logger2 "Hello from Log4j2 with getlogger log"))
-
-      (let [logger2 (LogManager/getLogger "com")]
-        (.info logger2 "Hello from Log4j2 with getlogger com"))
-
-      ;; the config logger is different, cannot use here.
-      ;; (.info logger "Hello from Log4j2 with config logger")
-
-      (let [logger2 (LogManager/getLogger "bla")]
-        (.info logger2 "Hello from Log4j2 with getlogger bla")
-        (println "logger: " logger2))
-
-
-
-      ;; create a new logger to a new file after these first logs.
-      ;; log something that only goes to this new file.
-      (let [file2 (.newAppender builder "log2" "File")
-            logger2 (.newLogger builder "com2" Level/INFO)]
-        (.add file2 standard)
-        (.addAttribute file2 "fileName" "target/logging2.log")
-        (.add builder file2)
-        (.add logger2 (.newAppenderRef builder "log2"))
-        (.addAttribute logger2 "additivity" false)
-        (.add builder logger2)
-
-        ;; builder.writeXmlConfiguration(System.out);
-        (.writeXmlConfiguration builder System/out)
-
-        ;; Configurator.initialize(builder.build());
-        ;; vorige deed een reconfigure, voor beiden iets te zeggen.
-        ;; 2022-01-10: check of dit init moet worden, of reconfig.
-        ;; 2022-01-10: lijkt geen initialize te zijn, dan com2 gewoon naar Console, en niet naar file.
-        #_(Configurator/initialize (.build builder))
-        (Configurator/reconfigure)
-        #_(Configurator/reconfigure (.build builder))
+      ;; Configurator.initialize(builder.build());
+      ;; vorige deed een reconfigure, voor beiden iets te zeggen.
+      (let [logger-context (Configurator/initialize (.build builder))]
 
         #_(println "config after initialize:")
         #_(.writeXmlConfiguration builder System/out)
 
+        (let [logger2 (LogManager/getLogger "Console")]
+          (.info logger2 "Hello from Log4j2 with info"))
+
+        (let [logger2 (LogManager/getLogger "log")]
+          (.info logger2 "Hello from Log4j2 with getlogger log"))
+
         (let [logger2 (LogManager/getLogger "com")]
           (.info logger2 "Hello from Log4j2 with getlogger com"))
 
-        (let [logger2a (LogManager/getLogger "com2")]
-          (.info logger2a "Hello from Log4j2 with getlogger com2"))
+        ;; the config logger is different, cannot use here.
+        ;; (.info logger "Hello from Log4j2 with config logger")
 
-        (let [logger2a (LogManager/getLogger "log2")]
-          (.info logger2a "Hello from Log4j2 with getlogger log2"))
+        (let [logger2 (LogManager/getLogger "bla")]
+          (.info logger2 "Hello from Log4j2 with getlogger bla")
+          (println "logger: " logger2))
 
+
+
+        ;; create a new logger to a new file after these first logs.
+        ;; log something that only goes to this new file.
+        (let [file2 (.newAppender builder "log2" "File")
+              logger2 (.newLogger builder "com2" Level/INFO)]
+          (.add file2 standard)
+          (.addAttribute file2 "fileName" "target/logging2.log")
+          (.add builder file2)
+          (.add logger2 (.newAppenderRef builder "log2"))
+          (.addAttribute logger2 "additivity" false)
+          (.add builder logger2)
+
+          ;; builder.writeXmlConfiguration(System.out);
+          (.writeXmlConfiguration builder System/out)
+
+          ;; Configurator.initialize(builder.build());
+          ;; vorige deed een reconfigure, voor beiden iets te zeggen.
+          ;; 2022-01-10: check of dit init moet worden, of reconfig.
+          ;; 2022-01-10: lijkt geen initialize te zijn, dan com2 gewoon naar Console, en niet naar file.
+          #_(Configurator/initialize (.build builder))
+          (Configurator/reconfigure)
+          #_(Configurator/reconfigure (.build builder))
+
+          #_(println "config after initialize:")
+          #_(.writeXmlConfiguration builder System/out)
+
+          (let [logger2 (LogManager/getLogger "com")]
+            (.info logger2 "Hello from Log4j2 with getlogger com"))
+
+          (let [logger2a (LogManager/getLogger "com2")]
+            (.info logger2a "Hello from Log4j2 with getlogger com2"))
+
+          (let [logger2a (LogManager/getLogger "log2")]
+            (.info logger2a "Hello from Log4j2 with getlogger log2"))
+
+          )
+        (Configurator/shutdown logger-context)
         )
-      (Configurator/shutdown logger-context)
+
+
+
+      ;; root-logger is a builder, cannot use.
+      #_(.error root-logger "Hello from root-logger")
+
+
       )
 
 
-
-    ;; root-logger is a builder, cannot use.
-    #_(.error root-logger "Hello from root-logger")
-
-
-    )
-
-
-  9)
+    9)
 
 ;; orig, zoveel mogelijk de java volgorde.
 #_(defn baeldung-test
@@ -658,19 +658,13 @@
     (-> builder
         (.add (std-err-appender builder std-err-app-name
                                 "%date %level %logger %message%n%throwable"))
-        (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
+        (.add (root-logger builder org.apache.logging.log4j.Level/OFF))
         (.add (-> logger
                   (.add (.newAppenderRef builder std-err-app-name)))))
     (let [context (config/start builder)]
       (.writeXmlConfiguration builder System/out)
       (println)
       context)))
-
-;; from testing:
-#_(defn memory-appender [state]
-    (proxy [AbstractAppender] [appender-name nil nil true, Property/EMPTY_ARRAY]
-      (append [^LogEvent event]
-        (state (logevent->data event)))))
 
 ;; from widd/config:
 ;; should this be an appender-config, an appender, or an appender-ref?
@@ -714,54 +708,47 @@
 
 (defn add-file-appender
   "Dynamically add file appender after (config/start)"
-  [context]
+  []
   (let [file-app-name "file"
         ;;record-event (mk-record-event)
         ;;app (testing/memory-appender record-event)
         app (make-file-appender "target/logfile-dyn.log")
         ]
-    (add-appender-to-running-context app context)))
+    (add-appender-to-running-context app)))
+
+(defn stop-logging
+  "Stop logging, including closing log files"
+  []
+  (Configurator/shutdown (log-impl/context)))
 
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
   #_(setup-logging-both)
   #_(def state (-> (testing/setup-recording-context) testing/context-state))
-  (let [context (setup-logging-stderr)]
+  (setup-logging-stderr)
 
-    ;;clojure maps wrapped in MapMessage object - top level keys must be
-    ;; Named (string, keyword, symbol etc). All these logging functions
-    ;; use current namespace as the logger-ref.
-    #_(log/info {"foo" "bar"})
+  (log/info "hello")
 
-    ;;log a string
-    (log/info "hello")
+  ;; change log level to trace
 
-    ;;log a Message - this is how you 'log data'
-    #_(log/info (MapMessage. {"foo" "bar"}))
+  (log/set-level 'ndevreeze.logger :trace)
 
-    ;; varargs arity is for formatted string only
-    #_(log/info "hello {} there" :foo)
+  (add-file-appender)
 
-    ;; builder - include throwable|marker|location
-    #_(-> (log/info-builder)
-          (log/with-location)
-          (log/with-throwable *e)
-          ;; finally log string or Message etc
-          (log/log {"foo" "bar"}))
+  (log/info "Appenders: {}" (config/get-appenders))
+  (log/info "context->data: {}" (config/context->data))
 
-    ;; change log level to trace
-    (log/set-level 'ndevreeze.logger :trace)
+  (log/info "Log after adding file appender")
 
-    (add-file-appender context)
+  (stop-logging)
 
-    (log/info "Appenders: {}" (config/get-appenders))
-    (log/info "context->data: {}" (config/context->data))
-
-    (log/info "Log after adding file appender")
-    (println "============================")
-    #_(println "@state after all logging: " @state)
-    (println "============================")
-    )
-
+  ;; warning is shown: WARN No Log4j 2 configuration file found. Using
+  ;; default configuration (logging only errors to the console), or
+  ;; user programmatically provided configurations. Set system
+  ;; property 'log4j2.debug' to show Log4j 2 internal initialization
+  ;; logging. See
+  ;; https://logging.apache.org/log4j/2.x/manual/configuration.html
+  ;; for instructions on how to configure Log4j 2
+  (log/info "Log after stop-logging")
   10)
