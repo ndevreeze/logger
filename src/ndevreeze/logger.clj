@@ -852,6 +852,19 @@
     ;; scratch. We don't want this.
     ))
 
+(defn stop-logger-with-appenders
+  [logger]
+  (println "Stopping logger with appenders: " logger)
+  (doseq [[_name app] (.getAppenders logger)]
+    (stop-appender app))
+  (let [ctx (log-impl/context)
+        cfg (.getConfiguration ctx)]
+    (.removeLogger cfg (.getName logger))
+    (.updateLoggers ctx)
+    ;; (.reconfigure ctx) ;; seems to remove all loggers, start from
+    ;; scratch. We don't want this.
+    ))
+
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
@@ -895,7 +908,7 @@
 
     (log logger :info ["LA: log logger :info - Log after adding file appender (dyn2)"])
     (log/info "LA1a: Log just before stopping logger file appender (stderr)")
-    (stop-logger-appender logger app)
+    (stop-logger-with-appenders logger)
     (print-loggers-appenders "After stopping logger and appender")
     (log/info "LA1b: Log after stopping logger file appender (stderr)")
     (log logger :info ["LA2: log after stopping logger and file appender (dyn2, not shown)"])
