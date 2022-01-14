@@ -75,12 +75,12 @@
     (instance? Level level) level))
 
 ;; TODO - maybe also forms that use a dynamic var *logger* in a binding form.
-
+;; TODO: the str/join forms causes space between each letter of string in some cases (log4j2).
 (defn log
   "log to the logger associated with the current *err* stream"
   ([logger level forms]
    (when logger
-     (.log logger (as-level level) (str/join " " forms))))
+     (.log logger (as-level level) (str/join "_" forms))))
   ([level forms]
    (log (get-logger *err*) level forms)))
 
@@ -615,7 +615,7 @@
                    (.addAttribute "additivity" false))]
     (-> builder
         (.add (std-err-appender builder std-err-app-name
-                                "%date %level %logger %message%n%throwable"))
+                                "%date %level %logger %appender %message%n%throwable"))
         (.add (file-appender builder file-app-name
                              "%date %level %logger %message%n%throwable"
                              "target/logfile.log"))
@@ -668,18 +668,23 @@
 
 ;; from widd/config:
 ;; should this be an appender-config, an appender, or an appender-ref?
+;; TODO: appender-from-ctx looks the same as the given appender, same class and address.
 (defn add-appender-to-running-context
+  "Return logger"
   ([appender] (add-appender-to-running-context appender (log-impl/context)))
   ([^Appender appender ^LoggerContext context]
+   (println "Starting appender: " appender)
    (.start appender)
    (-> (.getConfiguration context)
        (.addAppender appender))
    (let [appender-from-ctx (-> (.getConfiguration context)
                                (.getAppender (.getName appender)))]
      (doseq [logger (config/get-loggers context)]
+       (println "Add app-from-ctx to logger: " appender-from-ctx logger)
        (.info config/status-logger (str "adding appender to " (.getName logger)))
-       (.addAppender logger appender-from-ctx))     )
-   (.updateLoggers context)))
+       (.addAppender logger appender-from-ctx)))
+   (.updateLoggers context)
+   (config/get-loggers context)))
 
 (defn mk-record-event
   []
@@ -699,23 +704,80 @@
 (defn make-file-appender
   "Dynamically create a file appender, with a builder.
    Normally called after initial config is done."
-  [filename]
+  [name filename]
   (-> (FileAppender/newBuilder)
-      (.setName "file")
+      (.setName name)
       (.withFileName filename)
       (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
       (.build)))
 
+;; from widd/log_api.clj
+#_(defn set-level
+    "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
+    [logger-name level]
+    (let [ctx ^org.apache.logging.log4j.core.LoggerContext (log-impl/context)]
+      (-> ctx
+          (.getConfiguration)
+          (.getLoggerConfig (str logger-name))
+          (.setLevel (Level/valueOf (str/upper-case (name level)))))
+      (.updateLoggers ctx)))
+
+;; changed a bit, directly giving level.
+(defn set-level
+  "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
+  [logger-name level]
+  (let [ctx ^org.apache.logging.log4j.core.LoggerContext (log-impl/context)]
+    (-> ctx
+        (.getConfiguration)
+        (.getLoggerConfig (str logger-name))
+        (.setLevel level))
+    (.updateLoggers ctx)))
+
+;; maybe need root-logger as parent.  also need level, normally
+;; INFO. But see no method to set this. Maybe while getting the logger
+(defn make-logger
+  "Dynamically create a logger, with a builder.
+   Normally called after initial config is done."
+  [^String name]
+  (let [logger (LogManager/getLogger ^String name)]
+    (println "make-logger busy, created (before .setLevel): " logger)
+    (.setLevel logger Level/INFO)
+    (.setAdditive logger false)
+    (set-level name Level/INFO)
+    (println "make-logger done, created: " logger)
+    (println " with level: " (.getLevel logger))
+    (println "Level/INFO: " Level/INFO)
+    logger))
+
+#_(defn make-logger
+    "Dynamically create a logger, with a builder.
+   Normally called after initial config is done."
+    [name]
+    (LogManager/getLogger name))
+
 (defn add-file-appender
   "Dynamically add file appender after (config/start)"
-  []
-  (let [file-app-name "file"
-        ;;record-event (mk-record-event)
-        ;;app (testing/memory-appender record-event)
-        app (make-file-appender "target/logfile-dyn.log")
-        ]
-    (add-appender-to-running-context app)
-    app))
+  [name]
+  (let [app (make-file-appender name "target/logfile-dyn.log")
+        logger (add-appender-to-running-context app)]
+    [logger app]))
+
+(defn add-logger-file-appender
+  "Dynamically add logger and file appender after (config/start)"
+  [name]
+  (println "add-logger-file-appender with name: " name)
+  (let [logger (make-logger ^String name)
+        app (make-file-appender name "target/logfile-dyn2.log")
+        ctx (log-impl/context)]
+    (.start app)
+    (println "Started app: " app)
+    (-> (.getConfiguration ctx)
+        (.addAppender app))
+    (let [app-from-ctx (-> (.getConfiguration ctx)
+                           (.getAppender (.getName app)))]
+      (println "Adding app-from-ctx to logger:" app-from-ctx logger)
+      (.addAppender logger app-from-ctx))
+    [logger app]))
 
 (defn stop-logging
   "Stop logging, including closing log files"
@@ -731,6 +793,23 @@
       (.info config/status-logger (str "removing appender from " (.getName logger)))
       (.removeAppender logger app))))
 
+(defn get-appenders
+  ([] (get-appenders (log-impl/context)))
+  ([^LoggerContext context]
+   (->> (config/get-loggers context)
+        (mapcat (fn [l] (.getAppenders l))))))
+
+(defn print-loggers-appenders
+  "Print loggers and appenders from current context to stdout"
+  [title]
+  (println "=================")
+  (println title)
+  (doseq [l (config/get-loggers (log-impl/context))]
+    (println "logger: " l)
+    (doseq [app (.getAppenders l)]
+      (println "-> app: " app)))
+  (println "================="))
+
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
@@ -744,17 +823,36 @@
 
   (log/set-level 'ndevreeze.logger :trace)
 
-  (let [app (add-file-appender)]
+  (let [[loggers app] (add-file-appender "file")]
 
     (log/info "Appenders: {}" (config/get-appenders))
     (log/info "context->data: {}" (config/context->data))
 
+    (print-loggers-appenders "After add-file-appender")
+
     (log/info "Log after adding file appender")
+    #_(doseq [logger loggers]
+        (println "logger: " logger)
+        (log logger :info "log logger :info - Log after adding file appender"))
 
     ;; prb also remove from context
     (stop-appender app)
     (log/info "Log after stopping file appender")
     )
+
+  (let [[logger app] (add-logger-file-appender "loggerfile")]
+
+    #_(log logger :info "LA: Appenders: {}" (config/get-appenders))
+    #_(log/info "LA: context->data: {}" (config/context->data))
+
+    (log logger :info "LA: Log after adding file appender")
+    (print-loggers-appenders "After add-logger-file-appender")
+    ;; prb also remove from context
+    (stop-appender app)
+    (log logger :info "LA: log logger :info - Log after adding file appender")
+    (log/info "LA: Log after stopping file appender")
+    )
+
 
   (stop-logging)
 

@@ -6,3 +6,6 @@ cat stderr.txt
 echo .
 echo Contents of target/logfile-dyn.log:
 cat target/logfile-dyn.log
+echo .
+echo Contents of target/logfile-dyn2.log:
+cat target/logfile-dyn2.log
