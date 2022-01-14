@@ -615,10 +615,8 @@
         logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
                    (.addAttribute "additivity" false))]
     (-> builder
-        (.add (std-err-appender builder std-err-app-name
-                                "%date %level %logger %appender %message%n%throwable"))
-        (.add (file-appender builder file-app-name
-                             "%date %level %logger %message%n%throwable"
+        (.add (std-err-appender builder std-err-app-name log-format))
+        (.add (file-appender builder file-app-name log-format
                              "target/logfile.log"))
         (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
         (.add (-> logger
@@ -637,10 +635,8 @@
         logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
                    (.addAttribute "additivity" false))]
     (-> builder
-        (.add (std-err-appender builder std-err-app-name
-                                "%date %level %logger %message%n%throwable"))
-        (.add (file-appender builder file-app-name
-                             "%date %level %logger %message%n%throwable"
+        (.add (std-err-appender builder std-err-app-name log-format))
+        (.add (file-appender builder file-app-name log-format
                              "target/logfile.log"))
         (.add (root-logger builder org.apache.logging.log4j.Level/INFO))
         (.add (-> logger
@@ -657,8 +653,7 @@
         logger (-> (.newLogger builder "ndevreeze.logger" Level/DEBUG)
                    (.addAttribute "additivity" false))]
     (-> builder
-        (.add (std-err-appender builder std-err-app-name
-                                "%date %level %logger %message%n%throwable"))
+        (.add (std-err-appender builder std-err-app-name log-format))
         (.add (root-logger builder org.apache.logging.log4j.Level/OFF))
         (.add (-> logger
                   (.add (.newAppenderRef builder std-err-app-name)))))
@@ -709,7 +704,7 @@
   (-> (FileAppender/newBuilder)
       (.setName name)
       (.withFileName filename)
-      (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
+      (.withLayout (make-layout log-format))
       (.build))  )
 
 (defn make-writer-appender
@@ -719,7 +714,7 @@
   (-> (WriterAppender/newBuilder)
       (.setName name)
       (.setTarget writer)
-      (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
+      (.withLayout (make-layout log-format))
       (.build)))
 
 ;; from widd/log_api.clj
