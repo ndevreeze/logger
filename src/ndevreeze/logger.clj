@@ -79,6 +79,7 @@
 (defn log
   "log to the logger associated with the current *err* stream"
   ([logger level forms]
+   (println "fn log called for logger, level and forms: " logger level forms)
    (when logger
      (.log logger (as-level level) (str/join "_" forms))))
   ([level forms]
@@ -772,12 +773,30 @@
     (.start app)
     (println "Started app: " app)
     (-> (.getConfiguration ctx)
-        (.addAppender app))
-    (let [app-from-ctx (-> (.getConfiguration ctx)
-                           (.getAppender (.getName app)))]
-      (println "Adding app-from-ctx to logger:" app-from-ctx logger)
-      (.addAppender logger app-from-ctx))
+        (.addLoggerAppender logger app))
+    #_(let [app-from-ctx (-> (.getConfiguration ctx)
+                             (.getAppender (.getName app)))]
+        (println "Adding app-from-ctx to logger:" app-from-ctx logger)
+        (.addAppender logger app-from-ctx))
     [logger app]))
+
+;; deze eerst gebruikt, ook goed. Maar met addLoggerAppender iets kleiner.
+#_(defn add-logger-file-appender
+    "Dynamically add logger and file appender after (config/start)"
+    [name]
+    (println "add-logger-file-appender with name: " name)
+    (let [logger (make-logger ^String name)
+          app (make-file-appender name "target/logfile-dyn2.log")
+          ctx (log-impl/context)]
+      (.start app)
+      (println "Started app: " app)
+      (-> (.getConfiguration ctx)
+          (.addAppender app))
+      (let [app-from-ctx (-> (.getConfiguration ctx)
+                             (.getAppender (.getName app)))]
+        (println "Adding app-from-ctx to logger:" app-from-ctx logger)
+        (.addAppender logger app-from-ctx))
+      [logger app]))
 
 (defn stop-logging
   "Stop logging, including closing log files"
@@ -810,6 +829,18 @@
       (println "-> app: " app)))
   (println "================="))
 
+(defn stop-logger-appender
+  [logger appender]
+  (println "Stopping logger and appender: " logger appender)
+  (stop-appender appender)
+  (let [ctx (log-impl/context)
+        cfg (.getConfiguration ctx)]
+    (.removeLogger cfg (.getName logger))
+    (.updateLoggers ctx)
+    ;; (.reconfigure ctx) ;; seems to remove all loggers, start from
+    ;; scratch. We don't want this.
+    ))
+
 (defn widd-test
   "Using code from https://github.com/henryw374/clojure.log4j2"
   []
@@ -823,14 +854,14 @@
 
   (log/set-level 'ndevreeze.logger :trace)
 
-  (let [[loggers app] (add-file-appender "file")]
+  (let [[_loggers app] (add-file-appender "file")]
 
     (log/info "Appenders: {}" (config/get-appenders))
     (log/info "context->data: {}" (config/context->data))
 
-    (print-loggers-appenders "After add-file-appender")
+    (print-loggers-appenders "After add-file-appender (dyn.log)")
 
-    (log/info "Log after adding file appender")
+    (log/info "Log after adding file appender (in dyn.log)")
     #_(doseq [logger loggers]
         (println "logger: " logger)
         (log logger :info "log logger :info - Log after adding file appender"))
@@ -845,12 +876,18 @@
     #_(log logger :info "LA: Appenders: {}" (config/get-appenders))
     #_(log/info "LA: context->data: {}" (config/context->data))
 
-    (log logger :info "LA: Log after adding file appender")
+    (log logger :info ["LA: Log after adding file appender"])
+    (register-logger! *err* logger)
+    (info "LA-info: Log after adding file appender")
     (print-loggers-appenders "After add-logger-file-appender")
     ;; prb also remove from context
-    (stop-appender app)
-    (log logger :info "LA: log logger :info - Log after adding file appender")
-    (log/info "LA: Log after stopping file appender")
+
+    (log logger :info ["LA: log logger :info - Log after adding file appender"])
+    (log/info "LA1a: Log just before stopping logger file appender (stderr)")
+    (stop-logger-appender logger app)
+    (print-loggers-appenders "After stopping logger and appender")
+    (log/info "LA1b: Log after stopping logger file appender (stderr)")
+    (log logger :info ["LA2: log after stopping logger and file appender"])
     )
 
 
