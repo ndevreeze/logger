@@ -710,6 +710,16 @@
       (.setName name)
       (.withFileName filename)
       (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
+      (.build))  )
+
+(defn make-writer-appender
+  "Mostly for *err* streams.
+   Name is needed for init."
+  [name writer]
+  (-> (WriterAppender/newBuilder)
+      (.setName name)
+      (.setTarget writer)
+      (.withLayout (make-layout "%date %level %logger %message%n%throwable"))
       (.build)))
 
 ;; from widd/log_api.clj
@@ -769,15 +779,16 @@
   (println "add-logger-file-appender with name: " name)
   (let [logger (make-logger ^String name)
         app (make-file-appender name "target/logfile-dyn2.log")
-        ctx (log-impl/context)]
+        err-app (make-writer-appender "err-app" *err*)
+        ctx (log-impl/context)
+        cfg (.getConfiguration ctx)]
     (.start app)
+    (.start err-app)
     (println "Started app: " app)
-    (-> (.getConfiguration ctx)
-        (.addLoggerAppender logger app))
-    #_(let [app-from-ctx (-> (.getConfiguration ctx)
-                             (.getAppender (.getName app)))]
-        (println "Adding app-from-ctx to logger:" app-from-ctx logger)
-        (.addAppender logger app-from-ctx))
+    (println "Started err-app: " err-app)
+    (.addLoggerAppender cfg logger app)
+    (.addAppender cfg err-app)
+    (.addAppender logger err-app)
     [logger app]))
 
 ;; deze eerst gebruikt, ook goed. Maar met addLoggerAppender iets kleiner.
@@ -876,18 +887,18 @@
     #_(log logger :info "LA: Appenders: {}" (config/get-appenders))
     #_(log/info "LA: context->data: {}" (config/context->data))
 
-    (log logger :info ["LA: Log after adding file appender"])
+    (log logger :info ["LA: Log after adding file appender (dyn2)"])
     (register-logger! *err* logger)
-    (info "LA-info: Log after adding file appender")
+    (info "LA-info: Log after adding file appender (dyn2)")
     (print-loggers-appenders "After add-logger-file-appender")
     ;; prb also remove from context
 
-    (log logger :info ["LA: log logger :info - Log after adding file appender"])
+    (log logger :info ["LA: log logger :info - Log after adding file appender (dyn2)"])
     (log/info "LA1a: Log just before stopping logger file appender (stderr)")
     (stop-logger-appender logger app)
     (print-loggers-appenders "After stopping logger and appender")
     (log/info "LA1b: Log after stopping logger file appender (stderr)")
-    (log logger :info ["LA2: log after stopping logger and file appender"])
+    (log logger :info ["LA2: log after stopping logger and file appender (dyn2, not shown)"])
     )
 
 
