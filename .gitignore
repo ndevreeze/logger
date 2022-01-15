@@ -14,3 +14,4 @@ git-add-commit.sh
 .eastwood
 lint.txt
 */.cache
+/stderr.txt
