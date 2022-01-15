@@ -76,23 +76,3 @@
              => "/tmp/%n-%d.log")
 
  )
-
-(midje/facts
- "Learn using log4j2"
-
- #_(midje/fact "Log to stdout"
-               (log/log4j2-test)
-               => 8)
-
- #_(midje/fact "Bealdung test to file"
-               (log/baeldung-test)
-               => 9)
-
- ;; 2022-01-15: even zonder deze, focus op de echte testcases.
- #_(midje/fact "Widd test to file"
-               (log/widd-test)
-               => 10)
-
-
-
- )

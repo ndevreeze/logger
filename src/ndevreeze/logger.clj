@@ -13,7 +13,7 @@
            [org.apache.logging.log4j.core.layout PatternLayout]
            [org.apache.logging.log4j.core.config.builder.api ConfigurationBuilderFactory]
            [org.apache.logging.log4j.core.config Configurator]
-           [org.apache.logging.log4j.core LoggerContext])  )
+           [org.apache.logging.log4j.core LoggerContext]))
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def ^:private log-format
