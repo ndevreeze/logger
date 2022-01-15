@@ -1,0 +1,32 @@
+#+STARTUP: content indent
+#+title: Logger - Using Log4J2
+* Introduction
+Using Log4j2 is quite a bit harder than using Log4j1. Main reason is we need dynamic loggers and appenders here, and Log4j2 likes to be configured through static configuration files. It is possible though, and the text below contains some pointers and failed tries. Also the code on https://github.com/henryw374/clojure.log4j2 has been a great inspiration.
+* Starting points
+- Do not use a log4j configuration file. Use programmatic setup.
+* Once only config
+We start with a builder and need to add a root-logger to it. This root-logger does not need an appender and has its level set to Level/OFF.
+#+begin_src clojure
+(defn init-system!
+  "Initialize logging system for log4j2.
+  Called once when loading namespace"
+  []
+  (let [builder (config/builder)]
+    (.add builder (-> (.newRootLogger builder Level/OFF)))
+    (let [context (config/start builder)]
+      (.writeXmlConfiguration builder System/out)
+      (println)
+      context)))
+
+(init-system!)
+#+end_src
+
+* Dynamic config for each new logfile
+In combination with the *err* writer.
+TODO after cleaning up the code.
+* Debug helpers
+Some functions left in the debug namespace:
+- print-loggers-appenders - print loggers and appenders currently known to logging-context.
+* Still unsure about
+- when using (.updateLoggers cfg) is needed. It seems (.addLoggerAppender cfg logger appender) already takes care of this.
+- (.reconfigure ctx) - seems to remove all loggers, start from scratch. We don't want this.
