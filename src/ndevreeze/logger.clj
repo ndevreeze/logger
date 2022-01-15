@@ -8,25 +8,20 @@
             [com.widdindustries.log4j2.log-api :as log] ; TODO: rename to api or widd.
             [com.widdindustries.log4j2.log-impl :as log-impl] ; TODO: rename to api or widd.
             [com.widdindustries.log4j2.config :as config]
-            [com.widdindustries.log4j2.testing :as testing]
+
             [me.raynes.fs :as fs])
-  #_(:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
-              Level Logger WriterAppender])
   (:import [org.apache.logging.log4j LogManager Logger Level]
-           [org.apache.logging.log4j.message Message]
-           [org.apache.logging.log4j.core.appender ConsoleAppender ConsoleAppender$Target
+           ;;         [org.apache.logging.log4j.message Message]
+           [org.apache.logging.log4j.core.appender ConsoleAppender$Target
             WriterAppender FileAppender]
            [org.apache.logging.log4j.core LoggerContext Appender]
            [org.apache.logging.log4j.core.config Configurator]
            [org.apache.logging.log4j.core.config.builder.api AppenderComponentBuilder
             ComponentBuilder ConfigurationBuilder ConfigurationBuilderFactory
             LayoutComponentBuilder RootLoggerComponentBuilder]
-           [org.apache.logging.log4j.core.config.builder.impl BuiltConfiguration]
+           ;;           [org.apache.logging.log4j.core.config.builder.impl BuiltConfiguration]
            [org.apache.logging.log4j.core.layout PatternLayout]
-           [java.io StringWriter PrintWriter]
-
-           ;; example from widd:
-           [org.apache.logging.log4j.message MapMessage])
+           )
   )
 
 ;; ./log4j-core/src/main/java/org/apache/logging/log4j/core/appender/WriterAppender.java
@@ -43,17 +38,20 @@
 (defn- register-logger!
   "Register a Logger by associating it with a (dynamic) stream like *err*"
   [stream logger]
+  (println "register-logger! with stream, logger:" stream "," logger)
   (swap! loggers assoc stream logger))
 
 (defn- unregister-logger!
   "Unregister the Logger associated with the (dynamic) stream"
   [stream]
+  (println "unregister-logger! with stream:" stream)
   (swap! loggers dissoc stream))
 
 ;; TODO - public for now, used by genie. Maybe need another solution.
 (defn get-logger
   "Get logger associated with (error) stream"
   [stream]
+  (println "get-logger with stream:" stream)
   (get @loggers stream))
 
 (defn- ^Level as-level
@@ -81,7 +79,7 @@
   ([logger level forms]
    (println "fn log called for logger, level and forms: " logger level forms)
    (when logger
-     (.log logger (as-level level) (str/join "_" forms))))
+     (.log logger (as-level level) (str/join " " forms))))
   ([level forms]
    (log (get-logger *err*) level forms)))
 
@@ -101,17 +99,34 @@
 (def-log-function error)
 (def-log-function fatal)
 
+;; move to debug namespace? Or testing-namespace?
+(defn print-loggers-appenders
+  "Print loggers and appenders from current context to stdout"
+  [title]
+  (println "=================")
+  (println title)
+  (doseq [l (config/get-loggers (log-impl/context))]
+    (println "logger: " l)
+    (doseq [[name app] (.getAppenders l)]
+      (println "-> name, app: " name ", " app)))
+  (println "================="))
+
 (defn- remove-all-appenders!
   "Simulate v1 method"
   [logger]
+  (println "remove-all-appenders! for: " logger)
   (doseq [appender (vals (.getAppenders logger))]
+    (println "Removing appender:" appender)
+    (.stop appender)
     (.removeAppender logger appender)))
 
 (defn close
   "Close the currently active logger and appenders.
    Connected to *err*"
   []
+  (print-loggers-appenders "Before closing current logger for *err*")
   (let [logger (get-logger *err*)]
+    (println "close logger: " logger)
     (remove-all-appenders! logger)
     (unregister-logger! *err*)))
 
@@ -213,6 +228,22 @@
       (register-logger! *err* logger)
       logger))
 
+
+
+(defn init-system!
+  "Initialize logging system for log4j2.
+  Called once when loading namespace"
+  []
+  (let [builder (config/builder)]
+    (.add builder (-> (.newRootLogger builder Level/OFF)))
+    (let [context (config/start builder)]
+      (.writeXmlConfiguration builder System/out)
+      (println)
+      context)))
+
+(init-system!)
+
+
 (defn- get-logger!
   "get log4j logger, so appenders can be set.
    based on name, create new one if it does not exist yet.
@@ -222,59 +253,136 @@
     (register-logger! *err* logger)
     logger))
 
-(comment
-  "Logger classes:
+;; changed a bit, directly giving level.
+(defn set-level
+  "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
+  [logger-name level]
+  (let [ctx ^org.apache.logging.log4j.core.LoggerContext (log-impl/context)]
+    (-> ctx
+        (.getConfiguration)
+        (.getLoggerConfig (str logger-name))
+        (.setLevel level))
+    (.updateLoggers ctx)))
 
-  /**
-     * This method is not exposed through the public API and is used primarily for unit testing.
-     *
-     * @param appender The Appender to remove from the Logger.
-     */
-    public void removeAppender(final Appender appender) {
-        privateConfig.loggerConfig.removeAppender(appender.getName());
-    }
+;; maybe need root-logger as parent.  also need level, normally
+;; INFO. But see no method to set this. Maybe while getting the logger
+(defn make-logger
+  "Dynamically create a logger, with a builder.
+   Normally called after initial config is done."
+  [^String name]
+  (let [logger (LogManager/getLogger ^String name)]
+    (println "make-logger busy, created (before .setLevel): " logger)
+    (.setLevel logger Level/INFO)
+    (.setAdditive logger false)
+    (set-level name Level/INFO)
+    (println "make-logger done, created: " logger)
+    (println " with level: " (.getLevel logger))
+    (println "Level/INFO: " Level/INFO)
+    logger))
 
-    /**
-     * This method is not exposed through the public API and is used primarily for unit testing.
-     *
-     * @return A Map containing the Appender's name as the key and the Appender as the value.
-     */
-    public Map<String, Appender> getAppenders() {
-        return privateConfig.loggerConfig.getAppenders();
-    }
-"
-  )
+(defn make-logger2
+  "Dynamically create a logger, with a builder.
+   Normally called after initial config is done."
+  [^String name ^Level level]
+  (let [logger (LogManager/getLogger ^String name)]
+    (println "make-logger busy, created (before .setLevel): " logger)
+    (.setLevel logger level)
+    (.setAdditive logger false)
+    (set-level name level)
+    (println "make-logger done, created: " logger)
+    (println " with level: " (.getLevel logger))
+    (println "Level/INFO: " Level/INFO)
+    logger))
 
+(defn make-layout
+  "Dynamically create a Layout for a FileAppender, with a builder.
+   But not with a config"
+  [pattern]
+  (-> (PatternLayout/newBuilder)
+      (.withPattern pattern)
+      (.build)))
 
+(defn make-file-appender
+  "Dynamically create a file appender, with a builder.
+   Normally called after initial config is done."
+  [name filename]
+  (println "make-file-appender with name, filename:" name "," filename)
+  (-> (FileAppender/newBuilder)
+      (.setName name)
+      (.withFileName filename)
+      (.withLayout (make-layout log-format))
+      (.build)))
+
+(defn make-writer-appender
+  "Mostly for *err* streams.
+   Name is needed for init."
+  [name writer]
+  (println "make-writer-appender with name, writer:" name "," writer)
+  (-> (WriterAppender/newBuilder)
+      (.setName name)
+      (.setTarget writer)
+      (.withLayout (make-layout log-format))
+      (.build)))
 
 ;; rootLogger.add(builder.newAppenderRef("Console"));
+;; (str *err*) -> "java.io.PrintWriter@1c7d2933", so should be unique.
+;; maybe need to remove previous appenders.
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
   stderr only.
   Should be able to handle multiple init calls.
-  Return map with keys for logger created (or re-used) and logfile name"
+  Return map with keys for logger created (or re-used) and logfile name.
+  Also register-logger!, so it can be deregistered when done."
   ([logfile loglevel]
-   (let [config-builder (get-config-builder!)
-         root-logger (get-root-logger! config-builder)
-         logger (if logfile
-                  (get-logger! logfile)
-                  (get-logger! (str *err*)))]
-     (.setLevel logger (as-level loglevel))
-     #_(.removeAllAppenders logger)
-     (remove-all-appenders! logger)
-     ;; rootLogger.add(builder.newAppenderRef("LogToRollingFile"));
-     ;; (.addAppender logger (.build (err-appender config-builder)))
-     (.add root-logger (.newAppenderRef config-builder "Error"))
-     #_(.add logger (.newAppenderRef config-builder "Error"))
-     (when logfile
-       #_(.addAppender logger (rotating-appender config-builder root-logger logfile))
-       (rotating-appender config-builder root-logger logfile)
-       (debug "Logging to:" logfile))
-     (Configurator/reconfigure (.build config-builder))
+   (let [logger (make-logger2 ^String (str *err*) (as-level loglevel))
+         app (when logfile (make-file-appender (str "file:" *err*) logfile))
+         err-app (make-writer-appender (str "err:" *err*) *err*)
+         ctx (log-impl/context)
+         cfg (.getConfiguration ctx)]
+     (.start err-app)
+     (println "Started err-app: " err-app)
+     (.addLoggerAppender cfg logger err-app)
+     (when app
+       (.start app)
+       (println "Started app: " app)
+       (.addAppender cfg app)
+       (.addAppender logger app))
+     (.updateLoggers ctx)
+     (print-loggers-appenders "At end of init-internal")
+     (register-logger! *err* logger)
+     (debug "Logging to:" logfile)
      {:logger logger :logfile logfile}))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
+
+#_(defn init-internal
+    "Sets a default, appwide log adapter. Optional arguments set the
+  default logfile and loglevel. If no logfile is provided, logs to
+  stderr only.
+  Should be able to handle multiple init calls.
+  Return map with keys for logger created (or re-used) and logfile name"
+    ([logfile loglevel]
+     (let [config-builder (get-config-builder!)
+           root-logger (get-root-logger! config-builder)
+           logger (if logfile
+                    (get-logger! logfile)
+                    (get-logger! (str *err*)))]
+       (.setLevel logger (as-level loglevel))
+       #_(.removeAllAppenders logger)
+       (remove-all-appenders! logger)
+       ;; rootLogger.add(builder.newAppenderRef("LogToRollingFile"));
+       ;; (.addAppender logger (.build (err-appender config-builder)))
+       (.add root-logger (.newAppenderRef config-builder "Error"))
+       #_(.add logger (.newAppenderRef config-builder "Error"))
+       (when logfile
+         #_(.addAppender logger (rotating-appender config-builder root-logger logfile))
+         (rotating-appender config-builder root-logger logfile)
+         (debug "Logging to:" logfile)         )
+       (Configurator/reconfigure (.build config-builder))
+       {:logger logger :logfile logfile}))
+    ([logfile] (init-internal logfile :info))
+    ([] (init-internal nil :info)))
 
 (defn to-pattern
   "Convert location (pattern shortcut) to an actual pattern for a log file.
@@ -660,7 +768,7 @@
     (let [context (config/start builder)]
       (.writeXmlConfiguration builder System/out)
       (println)
-      context)))
+      context))  )
 
 ;; from widd/config:
 ;; should this be an appender-config, an appender, or an appender-ref?
@@ -689,33 +797,7 @@
      (fn [event] (swap! state conj event))
      (with-meta {:state state}))))
 
-(defn make-layout
-  "Dynamically create a Layout for a FileAppender, with a builder.
-   But not with a config"
-  [pattern]
-  (-> (PatternLayout/newBuilder)
-      (.withPattern pattern)
-      (.build)))
 
-(defn make-file-appender
-  "Dynamically create a file appender, with a builder.
-   Normally called after initial config is done."
-  [name filename]
-  (-> (FileAppender/newBuilder)
-      (.setName name)
-      (.withFileName filename)
-      (.withLayout (make-layout log-format))
-      (.build))  )
-
-(defn make-writer-appender
-  "Mostly for *err* streams.
-   Name is needed for init."
-  [name writer]
-  (-> (WriterAppender/newBuilder)
-      (.setName name)
-      (.setTarget writer)
-      (.withLayout (make-layout log-format))
-      (.build)))
 
 ;; from widd/log_api.clj
 #_(defn set-level
@@ -728,32 +810,7 @@
           (.setLevel (Level/valueOf (str/upper-case (name level)))))
       (.updateLoggers ctx)))
 
-;; changed a bit, directly giving level.
-(defn set-level
-  "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
-  [logger-name level]
-  (let [ctx ^org.apache.logging.log4j.core.LoggerContext (log-impl/context)]
-    (-> ctx
-        (.getConfiguration)
-        (.getLoggerConfig (str logger-name))
-        (.setLevel level))
-    (.updateLoggers ctx)))
 
-;; maybe need root-logger as parent.  also need level, normally
-;; INFO. But see no method to set this. Maybe while getting the logger
-(defn make-logger
-  "Dynamically create a logger, with a builder.
-   Normally called after initial config is done."
-  [^String name]
-  (let [logger (LogManager/getLogger ^String name)]
-    (println "make-logger busy, created (before .setLevel): " logger)
-    (.setLevel logger Level/INFO)
-    (.setAdditive logger false)
-    (set-level name Level/INFO)
-    (println "make-logger done, created: " logger)
-    (println " with level: " (.getLevel logger))
-    (println "Level/INFO: " Level/INFO)
-    logger))
 
 #_(defn make-logger
     "Dynamically create a logger, with a builder.
@@ -784,7 +841,7 @@
     (.addLoggerAppender cfg logger app)
     (.addAppender cfg err-app)
     (.addAppender logger err-app)
-    [logger app]))
+    [logger app])  )
 
 ;; deze eerst gebruikt, ook goed. Maar met addLoggerAppender iets kleiner.
 #_(defn add-logger-file-appender
@@ -823,17 +880,6 @@
   ([^LoggerContext context]
    (->> (config/get-loggers context)
         (mapcat (fn [l] (.getAppenders l))))))
-
-(defn print-loggers-appenders
-  "Print loggers and appenders from current context to stdout"
-  [title]
-  (println "=================")
-  (println title)
-  (doseq [l (config/get-loggers (log-impl/context))]
-    (println "logger: " l)
-    (doseq [app (.getAppenders l)]
-      (println "-> app: " app)))
-  (println "================="))
 
 (defn stop-logger-appender
   [logger appender]

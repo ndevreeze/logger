@@ -21,51 +21,51 @@
                                      "18:45:22.361+0100] [DEBUG] Log at debug"))
              => "[INFO ] Log at info\n[DEBUG] Log at debug")
 
- #_(midje/fact "Test logger function only info, also to file"
-               (let [logfile "log1.out"]
-                 (fs/delete logfile)
-                 (log/init-internal logfile :info)
-                 (log/info "Log at info 1")
-                 (log/debug "Log at debug 1")
-                 (log/close)
-                 (-> logfile
-                     slurp
-                     remove-timestamps))
-               => "[INFO ] Log at info 1\n")
+ (midje/fact "Test logger function only info, also to file"
+             (let [logfile "log1.out"]
+               (fs/delete logfile)
+               (log/init-internal logfile :info)
+               (log/info "Log at info 1")
+               (log/debug "Log at debug 1")
+               (log/close)
+               (-> logfile
+                   slurp
+                   remove-timestamps))
+             => "[INFO ] Log at info 1\n")
 
- #_(midje/fact "Test logger function incl debug, also to file"
-               (let [logfile "log2.out"]
-                 (fs/delete logfile)
-                 (log/init-internal logfile :debug)
-                 (log/info "Log at info 2")
-                 (log/debug "Log at debug 2")
-                 (log/close)
-                 (-> logfile
-                     slurp
-                     remove-timestamps))
-               => (str "[DEBUG] Logging to: log2.out\n[INFO ] "
-                       "Log at info 2\n[DEBUG] Log at debug 2\n"))
+ (midje/fact "Test logger function incl debug, also to file"
+             (let [logfile "log2.out"]
+               (fs/delete logfile)
+               (log/init-internal logfile :debug)
+               (log/info "Log at info 2")
+               (log/debug "Log at debug 2")
+               (log/close)
+               (-> logfile
+                   slurp
+                   remove-timestamps))
+             => (str "[DEBUG] Logging to: log2.out\n[INFO ] "
+                     "Log at info 2\n[DEBUG] Log at debug 2\n"))
 
  ;; only to stdout/err, not to a file.
  ;; and mainly to test we do not get an Exception.
- #_(midje/fact "Test logger function only info, stdio"
-               (do
-                 (log/init-internal nil :info)
-                 (log/info "Log at info 3")
-                 (log/debug "Log at debug 3")
-                 (log/close)
-                 12)
-               => 12)
+ (midje/fact "Test logger function only info, stdio"
+             (do
+               (log/init-internal nil :info)
+               (log/info "Log at info 3")
+               (log/debug "Log at debug 3")
+               (log/close)
+               12)
+             => 12)
 
  ;; also only checking for Exceptions.
- #_(midje/fact "Test logger function incl debug, only stdio"
-               (do
-                 (log/init-internal nil :debug)
-                 (log/info "Log at info 4")
-                 (log/debug "Log at debug 4")
-                 (log/close)
-                 13)
-               => 13)
+ (midje/fact "Test logger function incl debug, only stdio"
+             (do
+               (log/init-internal nil :debug)
+               (log/info "Log at info 4")
+               (log/debug "Log at debug 4")
+               (log/close)
+               13)
+             => 13)
 
  (midje/fact "Test to-pattern"
              (log/to-pattern :home)
@@ -88,9 +88,10 @@
                (log/baeldung-test)
                => 9)
 
- (midje/fact "Widd test to file"
-             (log/widd-test)
-             => 10)
+ ;; 2022-01-15: even zonder deze, focus op de echte testcases.
+ #_(midje/fact "Widd test to file"
+               (log/widd-test)
+               => 10)
 
 
 
