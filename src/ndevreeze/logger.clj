@@ -5,14 +5,12 @@
   binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
             [java-time :as time]
-            [com.widdindustries.log4j2.log-impl :as widd-impl]
             [com.widdindustries.log4j2.config :as config]
-
             [me.raynes.fs :as fs])
   (:import [org.apache.logging.log4j LogManager Level]
            [org.apache.logging.log4j.core.appender
-            ConsoleAppender$Target WriterAppender FileAppender]
-           [org.apache.logging.log4j.core LoggerContext Appender]
+            WriterAppender FileAppender]
+           [org.apache.logging.log4j.core LoggerContext]
            [org.apache.logging.log4j.core.layout PatternLayout]))
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
@@ -113,7 +111,7 @@
 (defn- set-level
   "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
   [logger-name level]
-  (let [ctx ^LoggerContext (widd-impl/context)]
+  (let [ctx ^LoggerContext (LogManager/getContext false)]
     (-> ctx
         (.getConfiguration)
         (.getLoggerConfig (str logger-name))
@@ -149,7 +147,9 @@
       (.build)))
 
 (defn- make-writer-appender
-  "Mostly for *err* streams.
+  "Dynamically create a writer appender, with a builder.
+   Normally called after initial config is done.
+   Mostly for *err* streams.
    Name is needed for init."
   [name writer]
   (-> (WriterAppender/newBuilder)
@@ -158,9 +158,7 @@
       (.withLayout (make-layout log-format))
       (.build)))
 
-;; rootLogger.add(builder.newAppenderRef("Console"));
-;; (str *err*) -> "java.io.PrintWriter@1c7d2933", so should be unique.
-;; maybe need to remove previous appenders.
+;; TODO - maybe need to remove previous appenders.
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
@@ -173,7 +171,7 @@
    (let [logger (make-logger ^String (str *err*) (as-level loglevel))
          app (when logfile (make-file-appender (str "file:" *err*) logfile))
          err-app (make-writer-appender (str "err:" *err*) *err*)
-         ctx (widd-impl/context)
+         ctx (LogManager/getContext false)
          cfg (.getConfiguration ctx)]
      (.start err-app)
      (.addLoggerAppender cfg logger err-app)
@@ -187,7 +185,7 @@
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
-(defn to-pattern
+(defn to-file-location-pattern
   "Convert location (pattern shortcut) to an actual pattern for a log file.
    Or if location is not a keyword (but a string), treat it as a directory.
    Public, used in logger_test.clj"
@@ -259,7 +257,7 @@
          location nil
          overwrite false}}]
   (let [pattern (if location
-                  (to-pattern location)
+                  (to-file-location-pattern location)
                   pattern)
         path (if file
                (-> file fs/expand-home fs/absolute str (str/replace "\\" "/"))

@@ -67,12 +67,12 @@
                13)
              => 13)
 
- (midje/fact "Test to-pattern"
-             (log/to-pattern :home)
+ (midje/fact "Test to-file-location-pattern"
+             (log/to-file-location-pattern :home)
              => "%h/log/%n-%d.log")
 
- (midje/fact "Test to-pattern dir"
-             (log/to-pattern "/tmp")
+ (midje/fact "Test to-file-location-pattern dir"
+             (log/to-file-location-pattern "/tmp")
              => "/tmp/%n-%d.log")
 
  )
