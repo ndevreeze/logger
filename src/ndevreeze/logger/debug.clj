@@ -1,9 +1,16 @@
 (ns ndevreeze.logger.debug
   "Debugging functions for logger.
    Mainly used for getting Log4j2 to work."
-  (:require
-   [com.widdindustries.log4j2.log-impl :as widd-impl] ; TODO: rename to api or widd.
-   [com.widdindustries.log4j2.config :as config]))
+  (:import [org.apache.logging.log4j LogManager]))
+
+;; thanks to https://github.com/henryw374/clojure.log4j2
+(defn get-loggers
+  ([] (get-loggers (LogManager/getContext false)))
+  ([context]
+   (->> (.getLoggers (.getConfiguration context))
+        keys
+        (map (fn [logger-name]
+               (.getLogger context logger-name))))))
 
 ;; move to debug namespace? Or testing-namespace?
 (defn print-loggers-appenders
@@ -11,7 +18,7 @@
   [title]
   (println "=================")
   (println title)
-  (doseq [l (config/get-loggers (widd-impl/context))]
+  (doseq [l (get-loggers (LogManager/getContext false))]
     (println "logger: " l)
     (doseq [[name app] (.getAppenders l)]
       (println "-> name, app: " name ", " app)))

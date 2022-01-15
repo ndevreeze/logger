@@ -5,20 +5,22 @@
   binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
             [java-time :as time]
-            [com.widdindustries.log4j2.config :as config]
             [me.raynes.fs :as fs])
   (:import [org.apache.logging.log4j LogManager Level]
            [org.apache.logging.log4j.core.appender
             WriterAppender FileAppender]
            [org.apache.logging.log4j.core LoggerContext]
-           [org.apache.logging.log4j.core.layout PatternLayout]))
+           [org.apache.logging.log4j.core.layout PatternLayout]
+           [org.apache.logging.log4j.core.config.builder.api ConfigurationBuilderFactory]
+           [org.apache.logging.log4j.core.config Configurator]
+           [org.apache.logging.log4j.core LoggerContext])  )
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
-(def log-format
+(def ^:private log-format
   "Log format with timestamp, log-level, throwable and message"
   "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
-(def loggers
+(def ^:private loggers
   "Map of Logger objects, keyed by *err* streams"
   (atom {}))
 
@@ -96,16 +98,6 @@
   (let [logger (get-logger *err*)]
     (remove-all-appenders! logger)
     (unregister-logger! *err*)))
-
-(defn- init-system!
-  "Initialize logging system for log4j2.
-  Called once when loading namespace"
-  []
-  (let [builder (config/builder)]
-    (.add builder (.newRootLogger builder Level/OFF))
-    (config/start builder)))
-
-(init-system!)
 
 ;; changed a bit, directly giving level.
 (defn- set-level
@@ -301,3 +293,13 @@
   ([logfile loglevel] (init-internal logfile loglevel))
   ([] (init-internal nil :info)))
 
+;; thanks to: https://github.com/henryw374/clojure.log4j2
+(defn- init-system!
+  "Initialize logging system for log4j2.
+  Called once when loading namespace"
+  []
+  (let [builder (ConfigurationBuilderFactory/newConfigurationBuilder)]
+    (.add builder (.newRootLogger builder Level/OFF))
+    (Configurator/initialize (ClassLoader/getSystemClassLoader) (.build builder) nil)))
+
+(init-system!)
