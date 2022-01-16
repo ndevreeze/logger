@@ -31,33 +31,33 @@ We start with a builder and need to add a root-logger to it. This root-logger do
 * Dynamic config for each new logfile
 In combination with the =*err*= writer.
 TODO after cleaning up the code.
-- For naming the logger we use (str =*err*=), which should be unique, it gives something like "java.io.PrintWriter@1c7d2933". This is different from the standard way of creating a logger for each package/namespace.
-- .getAppenders on a logger results in a map. So destructure or use keys or vals.
+- For naming the logger we use =(str *err*)=, which should be unique, it gives something like ="java.io.PrintWriter@1c7d2933"=. This is different from the standard way of creating a logger for each package/namespace.
+- =.getAppenders= on a logger results in a map. So destructure or use keys or vals.
 - Appenders need to be started and stopped to open and close log-files.
 - Setting a log-level for a logger needs to be done through the context/config.
-- To create a logger, we can (still) use (LogManager/getLogger)
+- To create a logger, we can (still) use =(LogManager/getLogger)=
 - Use a builder to create a PatternLayout and Appenders.
 - Add created loggers and appenders to the context/config as well, next to adding appenders to loggers.
 - The Log4j system needs to be globally initialised with a newConfigurationBuilder. See init-system!
 - Adding appender from context to logger does not seem to be needed. This results in the same appender, so really no difference.
 * Debug helpers
 Some functions left in the debug namespace:
-- print-loggers-appenders - print loggers and appenders currently known to logging-context.
-- write-config - to write the XML config of a builder.
+- =print-loggers-appenders= - print loggers and appenders currently known to logging-context.
+- =write-config= - to write the XML config of a builder.
 - there are ways to have DEBUG logging for log4j itself. Something with setting the log-level on a config-builder. Unsure about details.
 * Semi-private classes and methods
 Not all uses of the classes and method in Log4j2 are full supported. To name a few:
-- Logger.getAppenders() - This method is not exposed through the public API and is used primarily for unit testing.
-- Logger.removeAppender(Appender appender) - same
-- Logger.setLevel(org.apache.logging.log4j.Level level) - same
-- Logger.setAdditive(boolean additive) - same
-- Logger.addAppender(Appender appender) - same
+- =Logger.getAppenders()= - This method is not exposed through the public API and is used primarily for unit testing.
+- =Logger.removeAppender(Appender appender)= - same
+- =Logger.setLevel(org.apache.logging.log4j.Level level)= - same
+- =Logger.setAdditive(boolean additive)= - same
+- =Logger.addAppender(Appender appender)= - same
 
 Source: https://logging.apache.org/log4j/2.x/log4j-core/apidocs/index.html. Maybe/probably all changes should be done through a LoggerContext and Configuration.
 * Still unsure about
-- when using (.updateLoggers cfg) is needed. It seems (.addLoggerAppender cfg logger appender) already takes care of this. For setting a level it is needed.
-- (.reconfigure ctx) - seems to remove all loggers, start from scratch. We don't want this.
-- (Configurator/reconfigure (.build config-builder)) - how does this compare with initialize?
+- when using =(.updateLoggers cfg)= is needed. It seems =(.addLoggerAppender cfg logger appender)= already takes care of this. For setting a level it is needed.
+- =(.reconfigure ctx)= - seems to remove all loggers, start from scratch. We don't want this.
+- =(Configurator/reconfigure (.build config-builder))= - how does this compare with initialize?
 * Alternatives
 - https://www.juxt.pro/blog/logging - Makes a case for writing your own logging functions.
 - https://www.clojure-toolbox.com/ - Many different options.
