@@ -101,7 +101,7 @@
 
 ;; changed a bit, directly giving level.
 (defn- set-level
-  "FYI the root logger name is the empty string. or you can refer to it via LogManager/ROOT_LOGGER_NAME"
+  "Change level for a logger through config."
   [^String logger-name ^Level level]
   (let [ctx ^LoggerContext (LogManager/getContext false)]
     (-> ctx
@@ -113,11 +113,11 @@
 (defn- make-logger
   "Dynamically create a logger, with a builder.
    Normally called after initial config is done."
-  [^String name ^Level level]
-  (let [logger ^Logger (LogManager/getLogger ^String name)]
+  [^String logger-name ^Level level]
+  (let [logger ^Logger (LogManager/getLogger ^String logger-name)]
     (.setLevel logger level)
     (.setAdditive logger false)
-    (set-level name level)
+    (set-level logger-name level)
     logger))
 
 (defn- make-layout
@@ -131,9 +131,9 @@
 (defn- make-file-appender
   "Dynamically create a file appender, with a builder.
    Normally called after initial config is done."
-  [^String name ^String filename]
+  [^String app-name ^String filename]
   (-> (FileAppender/newBuilder)
-      (.setName name)
+      (.setName app-name)
       (.withFileName filename)
       (.withLayout (make-layout log-format))
       (.build)))
@@ -143,9 +143,9 @@
    Normally called after initial config is done.
    Mostly for *err* streams.
    Name is needed for init."
-  [^String name ^Writer writer]
+  [^String app-name ^Writer writer]
   (-> (WriterAppender/newBuilder)
-      (.setName name)
+      (.setName app-name)
       (.setTarget writer)
       (.withLayout (make-layout log-format))
       (.build)))
@@ -161,7 +161,8 @@
   Public, used in logger_test.clj"
   ([^String logfile loglevel]
    (let [logger ^Logger (make-logger ^String (str *err*) (as-level loglevel))
-         app ^Appender (when logfile (make-file-appender (str "file:" *err*) logfile))
+         app (when logfile
+               (^Appender make-file-appender (str "file:" *err*) logfile))
          err-app ^Appender (make-writer-appender (str "err:" *err*) *err*)
          ctx ^LoggerContext (LogManager/getContext false)
          cfg ^Configuration (.getConfiguration ctx)]
@@ -298,8 +299,10 @@
   "Initialize logging system for log4j2.
   Called once when loading namespace"
   []
-  (let [builder ^ConfigurationBuilder (ConfigurationBuilderFactory/newConfigurationBuilder)]
+  (let [builder ^ConfigurationBuilder
+        (ConfigurationBuilderFactory/newConfigurationBuilder)]
     (.add builder (.newRootLogger builder Level/OFF))
-    (Configurator/initialize (ClassLoader/getSystemClassLoader) (.build builder) nil)))
+    (Configurator/initialize (ClassLoader/getSystemClassLoader)
+                             (.build builder) nil)))
 
 (init-system!)

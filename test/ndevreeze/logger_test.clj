@@ -1,8 +1,11 @@
 (ns ndevreeze.logger-test
+  "Test functions with Midje for logger."
   (:require [midje.sweet :as midje]
             [clojure.string :as str]
             [me.raynes.fs :as fs]
             [ndevreeze.logger :as log]))
+
+(declare =>)
 
 (defn remove-timestamps
   [text]

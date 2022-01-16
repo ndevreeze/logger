@@ -5,6 +5,8 @@
 
 ;; thanks to https://github.com/henryw374/clojure.log4j2
 (defn get-loggers
+  "Get loggers from context.
+   Use default context if none given."
   ([] (get-loggers (LogManager/getContext false)))
   ([context]
    (->> (.getLoggers (.getConfiguration context))
