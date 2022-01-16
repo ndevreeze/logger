@@ -76,6 +76,4 @@
 
  (midje/fact "Test to-file-location-pattern dir"
              (log/to-file-location-pattern "/tmp")
-             => "/tmp/%n-%d.log")
-
- )
+             => "/tmp/%n-%d.log"))
