@@ -1,8 +1,11 @@
 (ns ndevreeze.logger-test
+  "Test functions with Midje for logger."
   (:require [midje.sweet :as midje]
             [clojure.string :as str]
             [me.raynes.fs :as fs]
             [ndevreeze.logger :as log]))
+
+(declare =>)
 
 (defn remove-timestamps
   [text]
@@ -47,6 +50,7 @@
                      "Log at info 2\n[DEBUG] Log at debug 2\n"))
 
  ;; only to stdout/err, not to a file.
+ ;; and mainly to test we do not get an Exception.
  (midje/fact "Test logger function only info, stdio"
              (do
                (log/init-internal nil :info)
@@ -56,6 +60,7 @@
                12)
              => 12)
 
+ ;; also only checking for Exceptions.
  (midje/fact "Test logger function incl debug, only stdio"
              (do
                (log/init-internal nil :debug)
@@ -65,12 +70,10 @@
                13)
              => 13)
 
- (midje/fact "Test to-pattern"
-             (log/to-pattern :home)
+ (midje/fact "Test to-file-location-pattern"
+             (log/to-file-location-pattern :home)
              => "%h/log/%n-%d.log")
 
- (midje/fact "Test to-pattern dir"
-             (log/to-pattern "/tmp")
-             => "/tmp/%n-%d.log")
-
- )
+ (midje/fact "Test to-file-location-pattern dir"
+             (log/to-file-location-pattern "/tmp")
+             => "/tmp/%n-%d.log"))

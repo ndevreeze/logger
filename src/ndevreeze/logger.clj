@@ -2,21 +2,25 @@
   "Simple logging functions.
   Similar to onelog, and also used clj-logging-config for
   inspiration. Now use a logger per *err* stream. *err* gets a new
-  binding for each nRepl session, and so for each script run."
+  binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
             [java-time :as time]
             [me.raynes.fs :as fs])
-  (:import [org.apache.log4j DailyRollingFileAppender EnhancedPatternLayout
-            Level Logger WriterAppender]))
-
-;; TODO - should use Log4j v2, now using v1.
+  (:import java.io.Writer
+           [org.apache.logging.log4j Level LogManager]
+           [org.apache.logging.log4j.core Appender Logger LoggerContext]
+           [org.apache.logging.log4j.core.appender FileAppender WriterAppender]
+           [org.apache.logging.log4j.core.config Configuration Configurator]
+           [org.apache.logging.log4j.core.config.builder.api
+            ConfigurationBuilder ConfigurationBuilderFactory]
+           org.apache.logging.log4j.core.layout.PatternLayout))
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
-(def log-format
+(def ^:private log-format
   "Log format with timestamp, log-level, throwable and message"
   "[%d{yyyy-MM-dd HH:mm:ss.SSSZ}] [%-5p] %throwable%m%n")
 
-(def loggers
+(def ^:private loggers
   "Map of Logger objects, keyed by *err* streams"
   (atom {}))
 
@@ -55,7 +59,6 @@
     (instance? Level level) level))
 
 ;; TODO - maybe also forms that use a dynamic var *logger* in a binding form.
-
 (defn log
   "log to the logger associated with the current *err* stream"
   ([logger level forms]
@@ -72,6 +75,7 @@
      [& forms#]
      (log ~(keyword level) forms#)))
 
+;; TODO: define with doseq on level?
 (def-log-function trace)
 (def-log-function debug)
 (def-log-function info)
@@ -79,63 +83,105 @@
 (def-log-function error)
 (def-log-function fatal)
 
+(defn- remove-all-appenders!
+  "Stop and remove appenders from logger"
+  [^Logger logger]
+  (doseq [^Appender appender (vals (.getAppenders logger))]
+    (.stop appender)
+    (.removeAppender logger appender)))
+
 (defn close
   "Close the currently active logger and appenders.
-   Connected to *err*"
+   Connected to *err*.
+   Also unregister the logger"
   []
-  (let [logger (get-logger *err*)]
-    (.removeAllAppenders logger)
+  (let [^Logger logger (get-logger *err*)]
+    (remove-all-appenders! logger)
     (unregister-logger! *err*)))
 
-(defn- rotating-appender
-  "Returns a logging adapter that rotates the logfile nightly
-  at about midnight."
-  [logfile]
-  (DailyRollingFileAppender.
-   (EnhancedPatternLayout. log-format)
-   logfile
-   ".yyyy-MM-dd"))
+;; changed a bit, directly giving level.
+(defn- set-level
+  "Change level for a logger through config."
+  [^String logger-name ^Level level]
+  (let [ctx ^LoggerContext (LogManager/getContext false)]
+    (-> ctx
+        (.getConfiguration)
+        (.getLoggerConfig (str logger-name))
+        (.setLevel level))
+    (.updateLoggers ctx)))
 
-(defn- err-appender
-  "Returns a logging adapter that logs to the console (stderr),
-  connected to *err*"
-  []
-  (WriterAppender.
-   (EnhancedPatternLayout. log-format)
-   *err*))
-
-(defn- get-logger!
-  "get log4j logger, so appenders can be set.
-   based on name, create new one if it does not exist yet.
-   Also register the logger in the atom loggers"
-  [logger-name]
-  (let [logger (Logger/getLogger logger-name)]
-    (register-logger! *err* logger)
+(defn- make-logger
+  "Dynamically create a logger, with a builder.
+   Normally called after initial config is done."
+  [^String logger-name ^Level level]
+  (let [logger ^Logger (LogManager/getLogger ^String logger-name)]
+    (.setLevel logger level)
+    (.setAdditive logger false)
+    (set-level logger-name level)
     logger))
 
+(defn- make-layout
+  "Dynamically create a Layout for a FileAppender, with a builder.
+   But not with a config"
+  [^String pattern]
+  (-> (PatternLayout/newBuilder)
+      (.withPattern pattern)
+      (.build)))
+
+(defn- make-file-appender
+  "Dynamically create a file appender, with a builder.
+   Normally called after initial config is done."
+  [^String app-name ^String filename]
+  (-> (FileAppender/newBuilder)
+      (.setName app-name)
+      (.withFileName filename)
+      (.withLayout (make-layout log-format))
+      (.build)))
+
+(defn- make-writer-appender
+  "Dynamically create a writer appender, with a builder.
+   Normally called after initial config is done.
+   Mostly for *err* streams.
+   Name is needed for init."
+  [^String app-name ^Writer writer]
+  (-> (WriterAppender/newBuilder)
+      (.setName app-name)
+      (.setTarget writer)
+      (.withLayout (make-layout log-format))
+      (.build)))
+
+;; TODO - maybe need to remove previous appenders.
 (defn init-internal
   "Sets a default, appwide log adapter. Optional arguments set the
   default logfile and loglevel. If no logfile is provided, logs to
   stderr only.
   Should be able to handle multiple init calls.
-  Return map with keys for logger created (or re-used) and logfile name"
-  ([logfile loglevel]
-   (let [logger (if logfile
-                  (get-logger! logfile)
-                  (get-logger! (str *err*)))]
-     (.setLevel logger (as-level loglevel))
-     (.removeAllAppenders logger)
-     (.addAppender logger (err-appender))
-     (when logfile
-       (.addAppender logger (rotating-appender logfile))
-       (debug "Logging to:" logfile))
+  Return map with keys for logger created (or re-used) and logfile name.
+  Also register-logger!, so it can be deregistered when done.
+  Public, used in logger_test.clj"
+  ([^String logfile loglevel]
+   (let [logger ^Logger (make-logger ^String (str *err*) (as-level loglevel))
+         app (when logfile
+               (^Appender make-file-appender (str "file:" *err*) logfile))
+         err-app ^Appender (make-writer-appender (str "err:" *err*) *err*)
+         ctx ^LoggerContext (LogManager/getContext false)
+         cfg ^Configuration (.getConfiguration ctx)]
+     (.start err-app)
+     (.addLoggerAppender cfg logger err-app)
+     (when app
+       (.start app)
+       (.addAppender cfg app)
+       (.addAppender logger app))
+     (register-logger! *err* logger)
+     (debug "Logging to:" logfile)
      {:logger logger :logfile logfile}))
   ([logfile] (init-internal logfile :info))
   ([] (init-internal nil :info)))
 
-(defn to-pattern
+(defn to-file-location-pattern
   "Convert location (pattern shortcut) to an actual pattern for a log file.
-   Or if location is not a keyword (but a string), treat it as a directory"
+   Or if location is not a keyword (but a string), treat it as a directory.
+   Public, used in logger_test.clj"
   [location]
   (if (keyword? location)
     (get {:home   "%h/log/%n-%d.log"
@@ -144,7 +190,7 @@
           :temp   "%t/log/%n-%d.log"} location)
     (str location "/%n-%d.log")))
 
-(defn current-date-time
+(defn- current-date-time
   "Return current date and time in format yyyy-mm-ddTHH-MM-SS, based on
   current timezone"
   []
@@ -154,7 +200,7 @@
         odt (time/offset-date-time inst tz)]
     (time/format fmt odt)))
 
-(defn replace-letter
+(defn- replace-letter
   "Replace %h pattern etc with the actual values"
   [{:keys [cwd name]
     :or {name "script"}} letter]
@@ -166,7 +212,7 @@
     "n" (or name "script-name")
     "d" (current-date-time)))
 
-(defn to-log-file
+(defn- to-log-file
   "Create a log file name based on given options and pattern"
   [opts pattern]
   (str/replace pattern #"%([hcstnd])" (fn [[_ letter]]
@@ -204,7 +250,7 @@
          location nil
          overwrite false}}]
   (let [pattern (if location
-                  (to-pattern location)
+                  (to-file-location-pattern location)
                   pattern)
         path (if file
                (-> file fs/expand-home fs/absolute str (str/replace "\\" "/"))
@@ -247,3 +293,16 @@
      (init-internal par1 :info)))
   ([logfile loglevel] (init-internal logfile loglevel))
   ([] (init-internal nil :info)))
+
+;; thanks to: https://github.com/henryw374/clojure.log4j2
+(defn- init-system!
+  "Initialize logging system for log4j2.
+  Called once when loading namespace"
+  []
+  (let [builder ^ConfigurationBuilder
+        (ConfigurationBuilderFactory/newConfigurationBuilder)]
+    (.add builder (.newRootLogger builder Level/OFF))
+    (Configurator/initialize (ClassLoader/getSystemClassLoader)
+                             (.build builder) nil)))
+
+(init-system!)
