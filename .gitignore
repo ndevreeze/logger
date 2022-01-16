@@ -15,3 +15,4 @@ git-add-commit.sh
 lint.txt
 */.cache
 /stderr.txt
+/docs/log4j2.html
