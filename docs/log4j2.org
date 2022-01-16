@@ -61,4 +61,4 @@ Source: https://logging.apache.org/log4j/2.x/log4j-core/apidocs/index.html. Mayb
 * Alternatives
 - https://www.juxt.pro/blog/logging - Makes a case for writing your own logging functions.
 - https://www.clojure-toolbox.com/ - Many different options.
-- Timbre - Clojure only, without complicated Java libraries.
+- https://github.com/ptaoussanis/timbre - Clojure only, without complicated Java libraries.
