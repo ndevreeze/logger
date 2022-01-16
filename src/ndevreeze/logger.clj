@@ -6,14 +6,14 @@
   (:require [clojure.string :as str]
             [java-time :as time]
             [me.raynes.fs :as fs])
-  (:import [java.io Writer]
-           [org.apache.logging.log4j LogManager Level]
+  (:import java.io.Writer
+           [org.apache.logging.log4j Level LogManager]
            [org.apache.logging.log4j.core Appender Logger LoggerContext]
-           [org.apache.logging.log4j.core.appender WriterAppender FileAppender]
-           [org.apache.logging.log4j.core.layout PatternLayout]
-           [org.apache.logging.log4j.core.config Configurator Configuration]
+           [org.apache.logging.log4j.core.appender FileAppender WriterAppender]
+           [org.apache.logging.log4j.core.config Configuration Configurator]
            [org.apache.logging.log4j.core.config.builder.api
-            ConfigurationBuilder ConfigurationBuilderFactory]))
+            ConfigurationBuilder ConfigurationBuilderFactory]
+           org.apache.logging.log4j.core.layout.PatternLayout))
 
 ;; TODO - maybe also support other log-formats. But do want to keep it minimal.
 (def ^:private log-format

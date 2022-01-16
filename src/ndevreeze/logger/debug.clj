@@ -1,7 +1,7 @@
 (ns ndevreeze.logger.debug
   "Debugging functions for logger.
    Mainly used for getting Log4j2 to work."
-  (:import [org.apache.logging.log4j LogManager]))
+  (:import org.apache.logging.log4j.LogManager))
 
 ;; thanks to https://github.com/henryw374/clojure.log4j2
 (defn get-loggers
