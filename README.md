@@ -86,11 +86,7 @@ See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html
 
 ### Bugs
 
-* No known errors, but see Todo below. Use Github issues if you want to report a bug.
-
-### Todo
-
-* Should use Log4j v2, now using v1.
+* No known errors. Use Github issues if you want to report a bug.
 
 ## Related and similar projects (libraries)
 
@@ -99,7 +95,7 @@ See codox generated [API docs](https://ndevreeze.github.io/logger/api/index.html
 
 ## Version history
 
-* 0.6.0 - use Log4J 2.17.1
+* 0.6.0 - use Log4j 2.17.1
 
 ## License
 
