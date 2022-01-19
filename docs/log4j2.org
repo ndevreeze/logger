@@ -1,5 +1,5 @@
 #+STARTUP: content indent
-#+title: Logger - Using Log4J2
+#+title: Logger - Using Log4j2
 * Introduction
 Using Log4j2 is quite a bit harder than using Log4j1. Main reason is we need dynamic loggers and appenders here, and Log4j2 likes to be configured through static configuration files. It is possible though, and the text below contains some pointers and failed tries. Also the code on https://github.com/henryw374/clojure.log4j2 has been a great inspiration. I removed use of the library though, to minimize the number of dependencies.
 
