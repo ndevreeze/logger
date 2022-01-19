@@ -1,3 +1,5 @@
+#+STARTUP: content indent
+#+title: logger
 * logger
  :PROPERTIES:
  :CUSTOM_ID: logger
@@ -37,7 +39,7 @@ Clojure CLI/deps.edn
   ndevreeze/logger {:mvn/version "0.5.1"}
 #+END_EXAMPLE
 
-[[https://clojars.org/ndevreeze/logger][[[https://img.shields.io/clojars/v/ndevreeze/logger.svg]]]]
+[[https://clojars.org/ndevreeze/logger][https://img.shields.io/clojars/v/ndevreeze/logger.svg]]
 
 ** Usage
   :PROPERTIES:
@@ -127,8 +129,7 @@ See codox generated
 cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.5.1/doc/readme
 
 *** Other docs
-See [[docs/log4j2.org]]
-
+See [[file:docs/log4j.org][docs/log4j2.org]]
 *** Bugs
   :PROPERTIES:
   :CUSTOM_ID: bugs
