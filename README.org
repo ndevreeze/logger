@@ -30,13 +30,13 @@ another one? Some goals:
 Leiningen/Boot
 
 #+BEGIN_EXAMPLE
-  [ndevreeze/logger "0.5.1"]
+  [ndevreeze/logger "0.6.0"]
 #+END_EXAMPLE
 
 Clojure CLI/deps.edn
 
 #+BEGIN_EXAMPLE
-  ndevreeze/logger {:mvn/version "0.5.1"}
+  ndevreeze/logger {:mvn/version "0.6.0"}
 #+END_EXAMPLE
 
 [[https://clojars.org/ndevreeze/logger][https://img.shields.io/clojars/v/ndevreeze/logger.svg]]
@@ -125,12 +125,29 @@ or:
   :END:
 
 See codox generated
-[[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And
-cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.5.1/doc/readme
+[[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.6.0/api/ndevreeze
+** Creating docs
+#+begin_src bash
+lein codox
+# commit and push to github
+# wait a few minutes for github to push to ndvreeze.github.io
+#+end_src
+
+Also build Clojars docs from the site: https://cljdoc.org/d/ndevreeze/logger/0.6.0/doc/readme
+** Publish to Clojars
+#+begin_src bash
+lein deploy clojars
+#+end_src
+
+** Create a Github release
+
+https://github.com/ndevreeze/logger/releases/new
 
 ** Other docs
 See [[file:docs/log4j2.org][docs/log4j2.org]]
+
 ** Bugs
+
   :PROPERTIES:
   :CUSTOM_ID: bugs
   :END:
