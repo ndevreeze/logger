@@ -126,6 +126,9 @@ See codox generated
 [[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And
 cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.5.1/doc/readme
 
+*** Other docs
+See [[docs/log4j2.org]]
+
 *** Bugs
   :PROPERTIES:
   :CUSTOM_ID: bugs
