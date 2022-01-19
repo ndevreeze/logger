@@ -129,7 +129,7 @@ See codox generated
 cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.5.1/doc/readme
 
 *** Other docs
-See [[file:docs/log4j.org][docs/log4j2.org]]
+See [[file:docs/log4j2.org][docs/log4j2.org]]
 *** Bugs
   :PROPERTIES:
   :CUSTOM_ID: bugs
