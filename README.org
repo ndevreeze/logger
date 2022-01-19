@@ -1,13 +1,13 @@
 #+STARTUP: content indent
 #+title: logger
-* logger
+* What
  :PROPERTIES:
  :CUSTOM_ID: logger
  :END:
 
 Minimal Clojure logging library, mainly for scripting
 
-** Why?
+* Why?
   :PROPERTIES:
   :CUSTOM_ID: why
   :END:
@@ -22,7 +22,7 @@ another one? Some goals:
 - Support multiple log files, e.g. server/daemon and client/script
   logs.
 
-** Installation
+* Installation
   :PROPERTIES:
   :CUSTOM_ID: installation
   :END:
@@ -41,7 +41,7 @@ Clojure CLI/deps.edn
 
 [[https://clojars.org/ndevreeze/logger][https://img.shields.io/clojars/v/ndevreeze/logger.svg]]
 
-** Usage
+* Usage
   :PROPERTIES:
   :CUSTOM_ID: usage
   :END:
@@ -97,12 +97,12 @@ Then log at different levels:
   (log/info "At info level")
 #+END_EXAMPLE
 
-** Developing
+* Developing
   :PROPERTIES:
   :CUSTOM_ID: developing
   :END:
 
-*** Testing
+** Testing
   :PROPERTIES:
   :CUSTOM_ID: testing
   :END:
@@ -119,7 +119,7 @@ or:
   (autotest)
 #+END_EXAMPLE
 
-*** API Docs
+** API Docs
   :PROPERTIES:
   :CUSTOM_ID: api-docs
   :END:
@@ -128,16 +128,16 @@ See codox generated
 [[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And
 cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.5.1/doc/readme
 
-*** Other docs
+** Other docs
 See [[file:docs/log4j2.org][docs/log4j2.org]]
-*** Bugs
+** Bugs
   :PROPERTIES:
   :CUSTOM_ID: bugs
   :END:
 
 - No known errors. Use Github issues if you want to report a bug.
 
-** Related and similar projects (libraries)
+* Related and similar projects (libraries)
   :PROPERTIES:
   :CUSTOM_ID: related-and-similar-projects-libraries
   :END:
@@ -147,14 +147,14 @@ See [[file:docs/log4j2.org][docs/log4j2.org]]
 - https://github.com/malcolmsparks/clj-logging-config - also used as a
   base
 
-** Version history
+* Version history
   :PROPERTIES:
   :CUSTOM_ID: version-history
   :END:
 
 - 0.6.0 - use Log4j 2.17.1
 
-** License
+* License
   :PROPERTIES:
   :CUSTOM_ID: license
   :END:
