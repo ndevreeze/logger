@@ -170,12 +170,12 @@ See [[file:docs/log4j2.org][docs/log4j2.org]]
   :END:
 
 - 0.6.0 - use Log4j 2.17.1
-
+- 0.6.1 - bugfix - use :err as key in loggers as well, wrt highly dynamic error streams in the REPL.
 * License
   :PROPERTIES:
   :CUSTOM_ID: license
   :END:
 
-Copyright © 2020, 2021, 2022 Nico de Vreeze.
+Copyright © 2020, 2021, 2022, 2023 Nico de Vreeze.
 
 Distributed under the Eclipse Public License, the same as Clojure.
