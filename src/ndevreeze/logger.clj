@@ -9,7 +9,8 @@
   (:import java.io.Writer
            [org.apache.logging.log4j Level LogManager]
            [org.apache.logging.log4j.core Appender Logger LoggerContext]
-           [org.apache.logging.log4j.core.appender FileAppender WriterAppender]
+           [org.apache.logging.log4j.core.appender FileAppender
+            FileAppender$Builder WriterAppender]
            [org.apache.logging.log4j.core.config Configuration Configurator]
            [org.apache.logging.log4j.core.config.builder.api
             ConfigurationBuilder ConfigurationBuilderFactory]
@@ -36,9 +37,12 @@
 
 ;; TODO - public for now, used by genie. Maybe need another solution.
 (defn get-logger
-  "Get logger associated with (error) stream"
+  "Get logger associated with (error) stream.
+   if none found, also use key :err, wrt dynamic error streams in
+  REPL"
   [stream]
-  (get @loggers stream))
+  (or (get @loggers stream)
+      (get @loggers :err)))
 
 (defn- ^Level as-level
   "Get Java Level value for clojure keyword.
@@ -61,7 +65,7 @@
 ;; TODO - maybe also forms that use a dynamic var *logger* in a binding form.
 (defn log
   "log to the logger associated with the current *err* stream"
-  ([logger level forms]
+  ([^Logger logger level forms]
    (when logger
      (.log logger (as-level level) (str/join " " forms))))
   ([level forms]
@@ -95,9 +99,11 @@
    Connected to *err*.
    Also unregister the logger"
   []
-  (let [^Logger logger (get-logger *err*)]
+  (let [^Logger logger (or (get-logger *err*)
+                           (get-logger :err))]
     (remove-all-appenders! logger)
-    (unregister-logger! *err*)))
+    (unregister-logger! *err*)
+    (unregister-logger! :err)))
 
 ;; changed a bit, directly giving level.
 (defn- set-level
@@ -128,6 +134,8 @@
       (.withPattern pattern)
       (.build)))
 
+;; TODO - had type hints ^FileAppender$Builder, but Eastwood still
+;; complains. Is syntax wrong wrt -> macro?
 (defn- make-file-appender
   "Dynamically create a file appender, with a builder.
    Normally called after initial config is done."
@@ -157,7 +165,7 @@
   stderr only.
   Should be able to handle multiple init calls.
   Return map with keys for logger created (or re-used) and logfile name.
-  Also register-logger!, so it can be deregistered when done.
+  Also register-logger!, so it can be unregistered when done.
   Public, used in logger_test.clj"
   ([^String logfile loglevel]
    (let [logger ^Logger (make-logger ^String (str *err*) (as-level loglevel))
@@ -173,6 +181,8 @@
        (.addAppender cfg app)
        (.addAppender logger app))
      (register-logger! *err* logger)
+     (register-logger! :err logger) ; also log with keyword, wrt very
+                                        ; dynamic error streams in REPL
      (debug "Logging to:" logfile)
      {:logger logger :logfile logfile}))
   ([logfile] (init-internal logfile :info))
@@ -302,7 +312,27 @@
   (let [builder ^ConfigurationBuilder
         (ConfigurationBuilderFactory/newConfigurationBuilder)]
     (.add builder (.newRootLogger builder Level/OFF))
-    (Configurator/initialize (ClassLoader/getSystemClassLoader)
-                             (.build builder) nil)))
+    (Configurator/initialize ^ClassLoader (ClassLoader/getSystemClassLoader)
+                             ^Configuration (.build builder))))
+
+
+;; 2023-01-21: removed nil param as 3rd of initialize call: seems not
+;; needed, and warning with Eastwood Linter.
+#_(defn- init-system!
+    "Initialize logging system for log4j2.
+  Called once when loading namespace"
+    []
+    (let [builder ^ConfigurationBuilder
+          (ConfigurationBuilderFactory/newConfigurationBuilder)]
+      (.add builder (.newRootLogger builder Level/OFF))
+      (Configurator/initialize ^ClassLoader (ClassLoader/getSystemClassLoader)
+                               ^Configuration (.build builder) nil)))
 
 (init-system!)
+
+(comment
+  (def logger (:logger (init {:location :home :name "test-logger"
+                              :cwd "" :level :debug})))
+  (info "Testing logline from comment")
+  (log logger :info "Another test line")
+  (log logger :info ["Yet another test line"]))
