@@ -134,6 +134,9 @@ lein codox
 #+end_src
 
 Also build Clojars docs from the site: https://cljdoc.org/d/ndevreeze/logger/0.6.0/doc/readme
+** Linters
+- https://github.com/clj-kondo/clj-kondo (in Emacs, flycheck-mode)
+- ./linters.sh
 ** Publish to Clojars
 #+begin_src bash
 lein deploy clojars
