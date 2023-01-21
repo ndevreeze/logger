@@ -125,7 +125,9 @@ or:
   :END:
 
 See codox generated
-[[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.6.0/api/ndevreeze
+[[https://ndevreeze.github.io/logger/api/index.html][API docs]]. And cljdoc too: https://cljdoc.org/d/ndevreeze/logger/0.6.1/api/ndevreeze
+
+(change the version and visit the cljdoc link to generate new docs for new version)
 ** Creating docs
 #+begin_src bash
 lein codox
@@ -137,16 +139,16 @@ Also build Clojars docs from the site: https://cljdoc.org/d/ndevreeze/logger/0.6
 ** Linters
 - https://github.com/clj-kondo/clj-kondo (in Emacs, flycheck-mode)
 - ./linters.sh
-** Publish to Clojars
-#+begin_src bash
-lein deploy clojars
-#+end_src
-
 ** Create a Github release
 
 https://github.com/ndevreeze/logger/releases/new
 
 Also create a tag for this release.
+** Publish to Clojars
+#+begin_src bash
+lein deploy clojars
+#+end_src
+
 ** Other docs
 See [[file:docs/log4j2.org][docs/log4j2.org]]
 
