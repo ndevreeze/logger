@@ -5,8 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [clj-commons/fs "1.6.310"]
-                 [org.apache.logging.log4j/log4j-core "2.19.0"]
-                 [org.apache.logging.log4j/log4j-api "2.19.0"]
+                 [org.apache.logging.log4j/log4j-core "2.20.0"]
+                 [org.apache.logging.log4j/log4j-api "2.20.0"]
                  [clojure.java-time "1.2.0"]]
 
   :target-path "target/%s"
