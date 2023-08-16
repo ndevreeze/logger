@@ -7,7 +7,7 @@
                  [clj-commons/fs "1.6.310"]
                  [org.apache.logging.log4j/log4j-core "2.20.0"]
                  [org.apache.logging.log4j/log4j-api "2.20.0"]
-                 [clojure.java-time "1.2.0"]]
+                 [clojure.java-time "1.3.0"]]
 
   :target-path "target/%s"
 
