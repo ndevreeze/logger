@@ -5,15 +5,15 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [clj-commons/fs "1.6.310"]
-                 [org.apache.logging.log4j/log4j-core "2.22.0"]
-                 [org.apache.logging.log4j/log4j-api "2.22.0"]
+                 [org.apache.logging.log4j/log4j-core "2.22.1"]
+                 [org.apache.logging.log4j/log4j-api "2.22.1"]
                  [clojure.java-time "1.4.2"]]
 
   :target-path "target/%s"
 
   :resource-paths ["resources"]
   
-  :profiles {:dev {:dependencies [[midje "1.10.9"]]}}
+  :profiles {:dev {:dependencies [[midje "1.10.10"]]}}
 
   :repl-options {:init-ns ndevreeze.logger}
 
