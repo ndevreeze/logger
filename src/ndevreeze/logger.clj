@@ -4,7 +4,7 @@
   inspiration. Now use a logger per *err* stream. *err* gets a new
   binding for each nRepl session, and so for each script that will run."
   (:require [clojure.string :as str]
-            [java-time :as time]
+            [java-time.api :as time]  ;; use newer (1.4.2) version, single name is deprecated.
             [me.raynes.fs :as fs])
   (:import java.io.Writer
            [org.apache.logging.log4j Level LogManager]
