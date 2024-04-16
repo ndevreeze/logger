@@ -8,7 +8,7 @@
                  [org.apache.logging.log4j/log4j-core "2.23.1"]
                  [org.apache.logging.log4j/log4j-api "2.23.1"]
                  [clojure.java-time/clojure.java-time "1.4.2"]   ; 2024-04-03: wrt time/interval in missed-sales.
-                 [org.threeten/threeten-extra "1.2"]             ; 2024-04-03: prb this needs to be close to java-time
+                 [org.threeten/threeten-extra "1.7.2"]             ; 2024-04-03: prb this needs to be close to java-time
                  ]
 
   :target-path "target/%s"
