@@ -5,8 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [clj-commons/fs "1.6.311"]
-                 [org.apache.logging.log4j/log4j-core "2.24.2"]
-                 [org.apache.logging.log4j/log4j-api "2.24.2"]
+                 [org.apache.logging.log4j/log4j-core "2.24.3"]
+                 [org.apache.logging.log4j/log4j-api "2.24.3"]
                  [clojure.java-time/clojure.java-time "1.4.3"]   ; 2024-04-03: wrt time/interval in missed-sales.
                  [org.threeten/threeten-extra "1.8.0"]             ; 2024-04-03: prb this needs to be close to java-time
                  ]
